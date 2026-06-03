@@ -88,12 +88,9 @@ function DayCell({ date, videos }: { date: string; videos: YouTubeVideo[] }) {
         <span className="text-xs text-gray-500 ml-1">({dayOfWeek})</span>
       </div>
       <div className="space-y-2">
-        {videos.slice(0, 3).map((v) => (
+        {videos.map((v) => (
           <VideoCard key={v.videoId} video={v} />
         ))}
-        {videos.length > 3 && (
-          <p className="text-xs text-gray-500 text-center">+{videos.length - 3} more</p>
-        )}
       </div>
     </div>
   );
