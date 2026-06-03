@@ -148,11 +148,11 @@ export default function Home() {
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl md:text-3xl font-bold text-center">
-            📹 Vlog強化月間
+            📹 BSM地獄のVLOG強化月間
             <span className="text-gray-400 font-normal ml-2">2026.06</span>
           </h1>
           <p className="text-center text-gray-400 mt-2 text-sm">
-            参加メンバーの毎日Vlogをアドベントカレンダー形式でチェック！
+            参加メンバーの毎日のVLOGをチェック！脱落したらドリキン賞です(爆)
           </p>
           <div className="flex flex-wrap justify-center gap-2 mt-4">
             {CHANNELS.map((ch) => (
