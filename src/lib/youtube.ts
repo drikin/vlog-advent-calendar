@@ -24,7 +24,7 @@ const API_KEY = process.env.YOUTUBE_API_KEY!;
 async function fetchChannelVideos(channelId: string): Promise<any[]> {
   const uploadsPlaylistId = channelId.replace(/^UC/, "UU");
   const url = `${YT_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${API_KEY}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`YouTube API error for ${channelId}: ${res.status} ${text}`);
@@ -44,7 +44,7 @@ async function filterLiveVideos(videoIds: string[]): Promise<Set<string>> {
   for (let i = 0; i < videoIds.length; i += 50) {
     const chunk = videoIds.slice(i, i + 50).join(",");
     const url = `${YT_API_BASE}/videos?part=snippet,liveStreamingDetails&id=${chunk}&key=${API_KEY}`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) continue;
     const data = await res.json();
     for (const item of data.items || []) {

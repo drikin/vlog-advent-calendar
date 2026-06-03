@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { buildSiteData } from "@/lib/data";
-import { unstable_noStore as noStore } from "next/cache";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "auto";
 
 export async function GET() {
-  noStore();
   try {
     const data = await buildSiteData();
     return NextResponse.json(data);
