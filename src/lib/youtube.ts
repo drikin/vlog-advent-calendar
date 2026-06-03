@@ -16,9 +16,9 @@ export interface DayVideos {
 const YT_API_BASE = "https://www.googleapis.com/youtube/v3";
 const API_KEY = process.env.YOUTUBE_API_KEY!;
 
-/** Fetch latest videos for a channel (max 5) */
+/** Fetch latest videos for a channel (June 2026 only) */
 async function fetchChannelVideos(channelId: string): Promise<any[]> {
-  const url = `${YT_API_BASE}/search?part=snippet&channelId=${channelId}&order=date&maxResults=5&type=video&key=${API_KEY}`;
+  const url = `${YT_API_BASE}/search?part=snippet&channelId=${channelId}&order=date&maxResults=50&type=video&publishedAfter=2026-06-01T00%3A00%3A00Z&publishedBefore=2026-06-30T23%3A59%3A59Z&key=${API_KEY}`;
   const res = await fetch(url);
   if (!res.ok) {
     const text = await res.text();
@@ -58,11 +58,14 @@ export async function fetchAllVideos(
   return allVideos;
 }
 
-/** Group videos by date */
+/** Group videos by date (using America/Los_Angeles timezone) */
 export function groupByDate(videos: YouTubeVideo[]): DayVideos[] {
   const map = new Map<string, YouTubeVideo[]>();
   for (const v of videos) {
-    const date = v.publishedAt.split("T")[0]; // "2026-06-01"
+    // Convert UTC publishedAt to PT date
+    const date = new Date(v.publishedAt).toLocaleDateString("en-CA", {
+      timeZone: "America/Los_Angeles",
+    }); // "2026-06-02"
     if (!map.has(date)) map.set(date, []);
     map.get(date)!.push(v);
   }
