@@ -33,6 +33,30 @@ async function fetchChannelVideos(channelId: string): Promise<any[]> {
   return data.items || [];
 }
 
+/**
+ * Batch-check video IDs to filter out live streams.
+ * Returns a Set of videoIds that are NOT live streams.
+ * Cost: 1 quota unit per 50 videos.
+ */
+async function filterLiveVideos(videoIds: string[]): Promise<Set<string>> {
+  const nonLive = new Set<string>();
+  // batch in chunks of 50
+  for (let i = 0; i < videoIds.length; i += 50) {
+    const chunk = videoIds.slice(i, i + 50).join(",");
+    const url = `${YT_API_BASE}/videos?part=snippet,liveStreamingDetails&id=${chunk}&key=${API_KEY}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) continue;
+    const data = await res.json();
+    for (const item of data.items || []) {
+      // liveStreamingDetails exists → was a live stream → exclude
+      if (!item.liveStreamingDetails) {
+        nonLive.add(item.id);
+      }
+    }
+  }
+  return nonLive;
+}
+
 /** Fetch multiple channels and group by date */
 export async function fetchAllVideos(
   channels: { id: string; handle: string; name: string }[]
@@ -61,9 +85,14 @@ export async function fetchAllVideos(
     }
   }
 
+  // Filter out live streams
+  const allIds = allVideos.map((v) => v.videoId);
+  const nonLiveIds = await filterLiveVideos(allIds);
+  const filtered = allVideos.filter((v) => nonLiveIds.has(v.videoId));
+
   // Sort by publishedAt ascending
-  allVideos.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
-  return allVideos;
+  filtered.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
+  return filtered;
 }
 
 /** Group videos by date (UTC date, June 2026 only) */
