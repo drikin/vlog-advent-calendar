@@ -66,15 +66,13 @@ export async function fetchAllVideos(
   return allVideos;
 }
 
-/** Group videos by date (using America/Los_Angeles timezone, June 2026 only) */
+/** Group videos by date (UTC date, June 2026 only) */
 export function groupByDate(videos: YouTubeVideo[]): DayVideos[] {
   const map = new Map<string, YouTubeVideo[]>();
   for (const v of videos) {
-    // Convert UTC publishedAt to PT date
-    const date = new Date(v.publishedAt).toLocaleDateString("en-CA", {
-      timeZone: "America/Los_Angeles",
-    }); // "2026-06-02"
-    // June 2026 only (after PT conversion)
+    // Use UTC date from publishedAt ISO string directly
+    const date = v.publishedAt.slice(0, 10); // "2026-06-02"
+    // June 2026 only
     if (!date.startsWith("2026-06")) continue;
     if (!map.has(date)) map.set(date, []);
     map.get(date)!.push(v);
