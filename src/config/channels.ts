@@ -12,4 +12,5 @@ export const CHANNELS: Channel[] = [
   { id: "UCiRVdOExR15nU8a5PzOa3Ig", handle: "@gamecohtaro5914", name: "game cohtaro" },
   { id: "UCIcziIKVG1Y7meKEOXHNlGw", handle: "@eiko3kobe", name: "EIKO⭐️" },
   { id: "UCjp_3PEaOau_nT_3vnqKIvg", handle: "@junya1gou", name: "Junya.じゅんや" },
+  { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life", name: "物欲帳チャンネル" },
 ];
