@@ -5,8 +5,8 @@ export interface Channel {
 }
 
 export const CHANNELS: Channel[] = [
-  { id: "UCTfta7Ult6yLu7ru-WInOGg", handle: "@koh", name: "KOH" },
-  { id: "UCFuxphsWDDt210PEVWy883Q", handle: "@KentaYoutube", name: "KENTA YouTube" },
+  { id: "UCTfta7Ult6yLu7ru-WInOGg", handle: "@koh", name: "散財小説ドリキン" },
+  { id: "UCFuxphsWDDt210PEVWy883Q", handle: "@KentaYoutube", name: "tamper's channel" },
   { id: "UCJTvowm2dDsjw71aEHeHjGg", handle: "@散財ギタリストたなかしげつぐ", name: "散財ギタリストたなかしげつぐ" },
   { id: "UCC1iKYB1Y_KOtHZXk7zY1jg", handle: "@kentakov", name: "きままにいっkov" },
   { id: "UCtECO9x5EpcH_E2UUN7QqdQ", handle: "@Cohtaro", name: "こうたろうカメラ日記" },
