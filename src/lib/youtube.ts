@@ -16,16 +16,27 @@ export interface DayVideos {
 const YT_API_BASE = "https://www.googleapis.com/youtube/v3";
 const API_KEY = process.env.YOUTUBE_API_KEY!;
 
-/** Fetch latest videos for a channel (June 2026 only) */
+/**
+ * Fetch June 2026 videos via PlaylistItems API (uploads playlist).
+ * Cost: 1 quota unit per call (vs 100 for Search API).
+ * Uploads playlist ID = channel ID with "UC" replaced by "UU".
+ */
 async function fetchChannelVideos(channelId: string): Promise<any[]> {
-  const url = `${YT_API_BASE}/search?part=snippet&channelId=${channelId}&order=date&maxResults=50&type=video&publishedAfter=2026-06-01T00%3A00%3A00Z&publishedBefore=2026-06-30T23%3A59%3A59Z&key=${API_KEY}`;
-  const res = await fetch(url);
+  const uploadsPlaylistId = channelId.replace(/^UC/, "UU");
+  const url = `${YT_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${API_KEY}`;
+  const res = await fetch(url, { next: { revalidate: 3600 } }); // cache 1h
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`YouTube API error for ${channelId}: ${res.status} ${text}`);
   }
   const data = await res.json();
-  return data.items || [];
+
+  // Filter to June 2026 only
+  const items = (data.items || []).filter((item: any) => {
+    const published: string = item.snippet?.publishedAt ?? "";
+    return published.startsWith("2026-06");
+  });
+  return items;
 }
 
 /** Fetch multiple channels and group by date */
@@ -37,14 +48,17 @@ export async function fetchAllVideos(
   for (const ch of channels) {
     const items = await fetchChannelVideos(ch.id);
     for (const item of items) {
-      const publishedAt = item.snippet.publishedAt; // ISO 8601
-      // Only keep June 2026 videos
-      if (!publishedAt.startsWith("2026-06")) continue;
+      const publishedAt = item.snippet.publishedAt;
+      const videoId = item.snippet.resourceId?.videoId;
+      if (!videoId) continue;
 
       allVideos.push({
-        videoId: item.id.videoId,
+        videoId,
         title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || "",
+        thumbnail:
+          item.snippet.thumbnails?.high?.url ||
+          item.snippet.thumbnails?.medium?.url ||
+          "",
         publishedAt,
         channelId: ch.id,
         channelName: ch.name,
