@@ -30,13 +30,7 @@ async function fetchChannelVideos(channelId: string): Promise<any[]> {
     throw new Error(`YouTube API error for ${channelId}: ${res.status} ${text}`);
   }
   const data = await res.json();
-
-  // Filter to June 2026 only
-  const items = (data.items || []).filter((item: any) => {
-    const published: string = item.snippet?.publishedAt ?? "";
-    return published.startsWith("2026-06");
-  });
-  return items;
+  return data.items || [];
 }
 
 /** Fetch multiple channels and group by date */
@@ -72,7 +66,7 @@ export async function fetchAllVideos(
   return allVideos;
 }
 
-/** Group videos by date (using America/Los_Angeles timezone) */
+/** Group videos by date (using America/Los_Angeles timezone, June 2026 only) */
 export function groupByDate(videos: YouTubeVideo[]): DayVideos[] {
   const map = new Map<string, YouTubeVideo[]>();
   for (const v of videos) {
@@ -80,6 +74,8 @@ export function groupByDate(videos: YouTubeVideo[]): DayVideos[] {
     const date = new Date(v.publishedAt).toLocaleDateString("en-CA", {
       timeZone: "America/Los_Angeles",
     }); // "2026-06-02"
+    // June 2026 only (after PT conversion)
+    if (!date.startsWith("2026-06")) continue;
     if (!map.has(date)) map.set(date, []);
     map.get(date)!.push(v);
   }
