@@ -241,6 +241,9 @@ export default function Home() {
           <p className="text-center text-gray-400 mt-2 text-sm">
             参加メンバーの毎日のVLOGをチェック！脱落したらドリキン賞です(爆)
           </p>
+          <p className="text-center text-gray-500 mt-1 text-xs">
+            参加希望メンバーはドリキンに連絡ください
+          </p>
           {/* 視聴進捗バー */}
           {totalVideos > 0 && (
             <div className="max-w-sm mx-auto mt-4">
