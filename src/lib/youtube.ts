@@ -57,31 +57,48 @@ async function filterLiveVideos(videoIds: string[]): Promise<Set<string>> {
   return nonLive;
 }
 
-/** Fetch multiple channels and group by date */
+/** Fetch multiple channels in parallel and group by date */
 export async function fetchAllVideos(
   channels: { id: string; handle: string; name: string }[]
 ): Promise<YouTubeVideo[]> {
   const allVideos: YouTubeVideo[] = [];
 
-  for (const ch of channels) {
-    const items = await fetchChannelVideos(ch.id);
-    for (const item of items) {
-      const publishedAt = item.snippet.publishedAt;
-      const videoId = item.snippet.resourceId?.videoId;
-      if (!videoId) continue;
+  // Parallel fetch with allSettled — one channel dying doesn't kill the rest
+  const results = await Promise.allSettled(
+    channels.map(async (ch) => {
+      const items = await fetchChannelVideos(ch.id);
+      const videos: YouTubeVideo[] = [];
+      for (const item of items) {
+        const publishedAt = item.snippet.publishedAt;
+        const videoId = item.snippet.resourceId?.videoId;
+        if (!videoId) continue;
 
-      allVideos.push({
-        videoId,
-        title: item.snippet.title,
-        thumbnail:
-          item.snippet.thumbnails?.high?.url ||
-          item.snippet.thumbnails?.medium?.url ||
-          "",
-        publishedAt,
-        channelId: ch.id,
-        channelName: ch.name,
-        channelHandle: ch.handle,
-      });
+        videos.push({
+          videoId,
+          title: item.snippet.title,
+          thumbnail:
+            item.snippet.thumbnails?.high?.url ||
+            item.snippet.thumbnails?.medium?.url ||
+            "",
+          publishedAt,
+          channelId: ch.id,
+          channelName: ch.name,
+          channelHandle: ch.handle,
+        });
+      }
+      return videos;
+    })
+  );
+
+  // Collect successes, log failures
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      allVideos.push(...result.value);
+    } else {
+      const ch = channels[i];
+      console.warn(`[YouTube] Failed to fetch channel ${ch.handle} (${ch.id}): ${result.reason}`);
+      // Channel fails silently — other channels still work
     }
   }
 
@@ -93,6 +110,20 @@ export async function fetchAllVideos(
   // Sort by publishedAt ascending
   filtered.sort((a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime());
   return filtered;
+}
+
+/** Fetch all videos with fallback: return stale cache on total failure */
+export async function fetchAllVideosWithFallback(
+  channels: { id: string; handle: string; name: string }[],
+  fallback: YouTubeVideo[] = []
+): Promise<{ videos: YouTubeVideo[]; partialFailure: boolean }> {
+  try {
+    const videos = await fetchAllVideos(channels);
+    return { videos, partialFailure: false };
+  } catch (error) {
+    console.error("[YouTube] Total fetch failure, returning fallback:", error);
+    return { videos: fallback, partialFailure: true };
+  }
 }
 
 /** Group videos by date (UTC date, June 2026 only) */
