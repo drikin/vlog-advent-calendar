@@ -558,6 +558,82 @@ function RsvpManager({
   );
 }
 
+/* ─── Ranking View ─── */
+
+function RankingView({
+  days,
+  watched,
+  channels,
+}: {
+  days: DayVideos[];
+  watched: WatchedMap;
+  channels: Channel[];
+}) {
+  // Build per-channel stats
+  const channelStats = new Map<string, { name: string; color: string; total: number; watched: number }>();
+  for (const ch of channels) {
+    channelStats.set(ch.id, { name: ch.name, color: ch.color, total: 0, watched: 0 });
+  }
+
+  for (const day of days) {
+    for (const video of day.videos) {
+      const stat = channelStats.get(video.channelId);
+      if (stat) {
+        stat.total++;
+        if (watched.has(video.videoId)) stat.watched++;
+      }
+    }
+  }
+
+  const sorted = Array.from(channelStats.values())
+    .filter((s) => s.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  const maxTotal = sorted.length > 0 ? sorted[0].total : 1;
+
+  return (
+    <div className="mt-12 border-t border-gray-800 pt-8">
+      <div className="max-w-3xl mx-auto">
+        <h2 className="text-xl md:text-2xl font-bold text-center mb-2">🏆 更新頻度ランキング</h2>
+        <p className="text-gray-500 text-xs text-center mb-6">6月の動画投稿数順</p>
+        <div className="space-y-3">
+          {sorted.map((ch, idx) => {
+            const pct = maxTotal > 0 ? (ch.total / maxTotal) * 100 : 0;
+            const watchedPct = ch.total > 0 ? (ch.watched / ch.total) * 100 : 0;
+            const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+            return (
+              <div
+                key={ch.name}
+                className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{medal}</span>
+                    <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
+                  </div>
+                  <span className="text-sm text-gray-300 font-medium">{ch.total} 本</span>
+                </div>
+                {/* Bar: total */}
+                <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, backgroundColor: ch.color }}
+                  />
+                </div>
+                {/* Watched overlay */}
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>視聴済み: {ch.watched}/{ch.total}</span>
+                  <span>{watchedPct.toFixed(0)}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── CTA Bar ─── */
 
 function CtaBar() {
@@ -604,6 +680,7 @@ export default function VlogCalendarClient({
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<"calendar" | "ranking">("calendar");
 
   // Load watched state on mount
   useEffect(() => {
@@ -734,7 +811,7 @@ export default function VlogCalendarClient({
               </a>
             ))}
           </div>
-          <div className="flex justify-center mt-3">
+          <div className="flex justify-center mt-3 gap-2">
             <button
               onClick={() => setShowUnwatchedOnly(!showUnwatchedOnly)}
               className={`text-xs px-3 py-1 rounded-full border transition-colors ${
@@ -745,6 +822,16 @@ export default function VlogCalendarClient({
             >
               {showUnwatchedOnly ? "🟢 未視聴のみ表示中" : "⚪ 全動画表示"}
             </button>
+            <button
+              onClick={() => setViewMode(viewMode === "calendar" ? "ranking" : "calendar")}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                viewMode === "ranking"
+                  ? "bg-amber-900/40 text-amber-400 border-amber-700/50"
+                  : "bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-500"
+              }`}
+            >
+              {viewMode === "ranking" ? "📊 ランキング表示中" : "📊 ランキング"}
+            </button>
           </div>
           <p className="text-center text-gray-600 text-xs mt-3">
             Last updated: {new Date(updatedAt).toLocaleString("ja-JP")}
@@ -753,6 +840,10 @@ export default function VlogCalendarClient({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {viewMode === "ranking" ? (
+          <RankingView days={days} watched={watched} channels={channels} />
+        ) : (
+          <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
           {juneDates.map(({ date, videos }) => {
             const filtered = showUnwatchedOnly
@@ -777,6 +868,8 @@ export default function VlogCalendarClient({
               <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={channels} />
             ))}
         </div>
+          </>
+        )}
 
         {/* RSVP Section — デスブログ卒業式 オフ会 */}
         <div id="rsvp-section">
