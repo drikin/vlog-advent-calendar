@@ -603,6 +603,7 @@ export default function VlogCalendarClient({
   userDisplayName: string | null;
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
+  const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
 
   // Load watched state on mount
   useEffect(() => {
@@ -684,6 +685,7 @@ export default function VlogCalendarClient({
     (s, d) => s + d.videos.filter((v) => watched.has(v.videoId)).length,
     0
   );
+  const unwatchedCount = totalVideos - watchedCount;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -703,8 +705,12 @@ export default function VlogCalendarClient({
           {totalVideos > 0 && (
             <div className="max-w-sm mx-auto mt-4">
               <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>視聴済み</span>
-                <span className="text-green-400 font-medium">{watchedCount} / {totalVideos}</span>
+                <span>{showUnwatchedOnly ? "未視聴" : "視聴済み"}</span>
+                <span className="text-green-400 font-medium">
+                  {showUnwatchedOnly
+                    ? `${unwatchedCount} 本残り`
+                    : `${watchedCount} / ${totalVideos}`}
+                </span>
               </div>
               <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
                 <div
@@ -728,6 +734,18 @@ export default function VlogCalendarClient({
               </a>
             ))}
           </div>
+          <div className="flex justify-center mt-3">
+            <button
+              onClick={() => setShowUnwatchedOnly(!showUnwatchedOnly)}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                showUnwatchedOnly
+                  ? "bg-green-900/40 text-green-400 border-green-700/50"
+                  : "bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-500"
+              }`}
+            >
+              {showUnwatchedOnly ? "🟢 未視聴のみ表示中" : "⚪ 全動画表示"}
+            </button>
+          </div>
           <p className="text-center text-gray-600 text-xs mt-3">
             Last updated: {new Date(updatedAt).toLocaleString("ja-JP")}
           </p>
@@ -736,15 +754,25 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
-          {juneDates.map(({ date, videos }) => (
-            <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={channels} />
-          ))}
+          {juneDates.map(({ date, videos }) => {
+            const filtered = showUnwatchedOnly
+              ? videos.filter((v) => !watched.has(v.videoId))
+              : videos;
+            return (
+              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={channels} />
+            );
+          })}
         </div>
 
         <div className="md:hidden space-y-4">
           {juneDates
+            .map(({ date, videos }) => ({
+              date,
+              videos: showUnwatchedOnly
+                ? videos.filter((v) => !watched.has(v.videoId))
+                : videos,
+            }))
             .filter((d) => d.videos.length > 0)
-            .concat(juneDates.filter((d) => d.videos.length === 0))
             .map(({ date, videos }) => (
               <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={channels} />
             ))}
