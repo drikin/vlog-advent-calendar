@@ -681,6 +681,7 @@ export default function VlogCalendarClient({
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"calendar" | "ranking">("calendar");
+  const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
 
   // Load watched state on mount
   useEffect(() => {
@@ -798,19 +799,34 @@ export default function VlogCalendarClient({
             </div>
           )}
           <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {channels.map((ch) => (
-              <a
-                key={ch.id}
-                href={`https://youtube.com/${ch.handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs px-2.5 py-1 rounded-full border border-gray-700 hover:border-gray-500 transition-colors"
-                style={{ borderColor: ch.color + "40", color: ch.color }}
-              >
-                {ch.name}
-              </a>
-            ))}
+            {channels.map((ch) => {
+              const isActive = activeChannelFilter === ch.id;
+              return (
+                <button
+                  key={ch.id}
+                  onClick={() => setActiveChannelFilter(isActive ? null : ch.id)}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                    isActive
+                      ? "bg-white/10 border-white/30 text-white font-medium shadow-lg"
+                      : "border-gray-700 hover:border-gray-500"
+                  }`}
+                  style={!isActive ? { borderColor: ch.color + "40", color: ch.color } : {}}
+                >
+                  {ch.name}
+                </button>
+              );
+            })}
           </div>
+          {activeChannelFilter && (
+            <div className="flex justify-center mt-2">
+              <button
+                onClick={() => setActiveChannelFilter(null)}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                ✕ フィルター解除
+              </button>
+            </div>
+          )}
           <div className="flex justify-center mt-3 gap-2">
             <button
               onClick={() => setShowUnwatchedOnly(!showUnwatchedOnly)}
@@ -846,9 +862,12 @@ export default function VlogCalendarClient({
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
           {juneDates.map(({ date, videos }) => {
-            const filtered = showUnwatchedOnly
+            let filtered = showUnwatchedOnly
               ? videos.filter((v) => !watched.has(v.videoId))
               : videos;
+            if (activeChannelFilter) {
+              filtered = filtered.filter((v) => v.channelId === activeChannelFilter);
+            }
             return (
               <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={channels} />
             );
@@ -857,12 +876,15 @@ export default function VlogCalendarClient({
 
         <div className="md:hidden space-y-4">
           {juneDates
-            .map(({ date, videos }) => ({
-              date,
-              videos: showUnwatchedOnly
+            .map(({ date, videos }) => {
+              let filtered = showUnwatchedOnly
                 ? videos.filter((v) => !watched.has(v.videoId))
-                : videos,
-            }))
+                : videos;
+              if (activeChannelFilter) {
+                filtered = filtered.filter((v) => v.channelId === activeChannelFilter);
+              }
+              return { date, videos: filtered };
+            })
             .filter((d) => d.videos.length > 0)
             .map(({ date, videos }) => (
               <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={channels} />
