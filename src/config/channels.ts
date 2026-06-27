@@ -14,4 +14,6 @@ export const CHANNELS: Channel[] = [
   { id: "UCIcziIKVG1Y7meKEOXHNlGw", handle: "@eiko3kobe",         name: "EIKO⭐️",                        color: "#FF8A5C" },
   { id: "UCn03CTDReLR6KfMYoHokVGw", handle: "@jun_ya",            name: "jun_ya vlog channel",            color: "#95E1D3" },
   { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731" },
+  { id: "UCIlZWUBUeHX-NGBhf2_9ixw", handle: "@JunOtomo",          name: "湘南Vlogger - Jun Otomo",       color: "#45B7D1" },
+  { id: "UChjoF-1FQ1OprvUV-PoqHGQ", handle: "@mickel_xr",        name: "MICKEL",                         color: "#E17055" },
 ];
