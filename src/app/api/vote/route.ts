@@ -31,14 +31,14 @@ export async function GET() {
   }
 }
 
-/**
+/** 
  * POST /api/vote — toggle vote for a channel (auth required)
  *
  * Body: { channelId: string }
  *
- * If user already voted for this channel, remove the vote.
- * If user hasn't voted, add the vote.
- * One user = one vote per channel.
+ * One user = max 3 votes total across all channels.
+ * If user already voted for this channel, remove the vote (freeing a slot).
+ * If user hasn't voted and has < 3 votes, add the vote.
  */
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -75,11 +75,20 @@ export async function POST(request: NextRequest) {
 
     const did = session.did;
     const idx = votes[channelId].indexOf(did);
+
     if (idx >= 0) {
-      // Remove vote
+      // Remove vote (freeing a slot)
       votes[channelId].splice(idx, 1);
       if (votes[channelId].length === 0) delete votes[channelId];
     } else {
+      // Count total votes for this user across all channels
+      const totalVotes = Object.values(votes).filter((voters) => voters.includes(did)).length;
+      if (totalVotes >= 3) {
+        return NextResponse.json(
+          { error: "投票は最大3つまでです", votes },
+          { status: 400 }
+        );
+      }
       // Add vote
       votes[channelId].push(did);
     }

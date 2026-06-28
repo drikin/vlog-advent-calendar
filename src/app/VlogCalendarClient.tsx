@@ -609,6 +609,8 @@ function RankingView({
             const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
             const voteCount = votes[ch.id]?.length || 0;
             const hasVoted = userDid ? (votes[ch.id] || []).includes(userDid) : false;
+            const myTotalVotes = userDid ? Object.values(votes).filter((v) => v.includes(userDid)).length : 0;
+            const remainingVotes = Math.max(0, 3 - myTotalVotes);
             return (
               <div
                 key={ch.name}
@@ -741,6 +743,7 @@ export default function VlogCalendarClient({
       return;
     }
     // Optimistic update
+    const prevVote = voteState;
     setVoteState((prev) => {
       const next = { ...prev };
       const arr = next[channelId] || [];
@@ -758,12 +761,18 @@ export default function VlogCalendarClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelId }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setVoteState(data.votes);
+      const data = await res.json();
+      if (!res.ok) {
+        // Revert optimistic update
+        setVoteState(prevVote);
+        alert(data.error || "投票に失敗しました");
+        return;
       }
-    } catch {}
-  }, [userDid]);
+      setVoteState(data.votes);
+    } catch {
+      setVoteState(prevVote);
+    }
+  }, [userDid, voteState]);
 
   const handleWatch = useCallback(async (videoId: string) => {
     const now = new Date().toISOString();
