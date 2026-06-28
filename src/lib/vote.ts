@@ -29,6 +29,46 @@ export function userKey(did: string): string {
 
 export const MAX_VOTES = 3;
 
+let _migrated = false;
+
+/**
+ * One-time migration: move votes from old single JSON key to Redis SETs.
+ *
+ * Old format:  vote:channels = { channelId: [did, did, ...], ... }
+ * New format:  vote:ch:{channelId} = SET(did, did, ...)
+ *              vote:user:{did}     = SET(channelId, channelId, ...)
+ *
+ * Safe to call multiple times — checks a flag and bails early.
+ */
+async function migrateOldVotes(redis: Redis): Promise<void> {
+  if (_migrated) return;
+  _migrated = true;
+
+  try {
+    const raw = await redis.get("vote:channels");
+    if (!raw || typeof raw !== "object") return;
+
+    const oldVotes = raw as Record<string, string[]>;
+    const pipeline = redis.pipeline();
+
+    for (const [channelId, dids] of Object.entries(oldVotes)) {
+      if (!Array.isArray(dids) || dids.length === 0) continue;
+      // Use individual sadd calls to avoid TS spread issues
+      for (const did of dids) {
+        pipeline.sadd(chKey(channelId), did);
+        pipeline.sadd(userKey(did), channelId);
+      }
+    }
+
+    await pipeline.exec();
+    // Delete the old key so migration doesn't run again
+    await redis.del("vote:channels");
+    console.log(`[vote] Migrated ${Object.keys(oldVotes).length} channels from old format`);
+  } catch {
+    // Non-fatal — old data might not exist
+  }
+}
+
 /**
  * Read all channel votes in a single pipeline (efficient, atomic reads).
  */
@@ -37,6 +77,8 @@ export async function getAllVotes(): Promise<Record<string, string[]>> {
   if (!redis) return {};
 
   try {
+    await migrateOldVotes(redis);
+
     const pipeline = redis.pipeline();
     for (const ch of CHANNELS) {
       pipeline.smembers(chKey(ch.id));
