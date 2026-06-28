@@ -564,15 +564,21 @@ function RankingView({
   days,
   watched,
   channels,
+  votes,
+  userDid,
+  onVote,
 }: {
   days: DayVideos[];
   watched: WatchedMap;
   channels: Channel[];
+  votes: Record<string, string[]>;
+  userDid: string | null;
+  onVote: (channelId: string) => void;
 }) {
   // Build per-channel stats
-  const channelStats = new Map<string, { name: string; color: string; total: number; watched: number }>();
+  const channelStats = new Map<string, { id: string; name: string; color: string; total: number; watched: number }>();
   for (const ch of channels) {
-    channelStats.set(ch.id, { name: ch.name, color: ch.color, total: 0, watched: 0 });
+    channelStats.set(ch.id, { id: ch.id, name: ch.name, color: ch.color, total: 0, watched: 0 });
   }
 
   for (const day of days) {
@@ -601,6 +607,8 @@ function RankingView({
             const pct = maxTotal > 0 ? (ch.total / maxTotal) * 100 : 0;
             const watchedPct = ch.total > 0 ? (ch.watched / ch.total) * 100 : 0;
             const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+            const voteCount = votes[ch.id]?.length || 0;
+            const hasVoted = userDid ? (votes[ch.id] || []).includes(userDid) : false;
             return (
               <div
                 key={ch.name}
@@ -611,7 +619,20 @@ function RankingView({
                     <span className="text-lg">{medal}</span>
                     <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
                   </div>
-                  <span className="text-sm text-gray-300 font-medium">{ch.total} 本</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => onVote(ch.id)}
+                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        hasVoted
+                          ? "bg-pink-900/40 text-pink-400 border-pink-700/50 shadow-lg shadow-pink-900/20"
+                          : "bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-pink-500/50 hover:text-pink-400"
+                      }`}
+                    >
+                      <span>{hasVoted ? "❤️" : "🤍"}</span>
+                      <span>{voteCount}</span>
+                    </button>
+                    <span className="text-sm text-gray-300 font-medium">{ch.total} 本</span>
+                  </div>
                 </div>
                 {/* Bar: total */}
                 <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
@@ -669,6 +690,7 @@ export default function VlogCalendarClient({
   userDid,
   userHandle,
   userDisplayName,
+  votes,
 }: {
   days: DayVideos[];
   error: string | null;
@@ -677,11 +699,13 @@ export default function VlogCalendarClient({
   userDid: string | null;
   userHandle: string | null;
   userDisplayName: string | null;
+  votes: Record<string, string[]>;
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"calendar" | "ranking">("calendar");
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
+  const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
 
   // Load watched state on mount
   useEffect(() => {
@@ -709,6 +733,36 @@ export default function VlogCalendarClient({
       // Fallback: localStorage
       setWatched(loadWatchedLocal());
     })();
+  }, [userDid]);
+
+  const handleVote = useCallback(async (channelId: string) => {
+    if (!userDid) {
+      alert("投票するにはログインが必要です");
+      return;
+    }
+    // Optimistic update
+    setVoteState((prev) => {
+      const next = { ...prev };
+      const arr = next[channelId] || [];
+      if (arr.includes(userDid)) {
+        next[channelId] = arr.filter((d) => d !== userDid);
+      } else {
+        next[channelId] = [...arr, userDid];
+      }
+      return next;
+    });
+    // Sync to API
+    try {
+      const res = await fetch("/api/vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVoteState(data.votes);
+      }
+    } catch {}
   }, [userDid]);
 
   const handleWatch = useCallback(async (videoId: string) => {
@@ -857,7 +911,7 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={days} watched={watched} channels={channels} />
+          <RankingView days={days} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} />
         ) : (
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
