@@ -709,6 +709,19 @@ export default function VlogCalendarClient({
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
 
+  // Session keepalive: ping every 5 minutes while logged in
+  useEffect(() => {
+    if (!userDid) return;
+    const interval = setInterval(async () => {
+      try {
+        await fetch("/api/session/ping");
+      } catch {
+        // silent
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+    return () => clearInterval(interval);
+  }, [userDid]);
+
   // Load watched state on mount
   useEffect(() => {
     (async () => {
