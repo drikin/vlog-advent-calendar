@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
 
@@ -569,6 +570,7 @@ function RankingView({
   votes,
   userDid,
   onVote,
+  defaultTab = "posts",
 }: {
   days: DayVideos[];
   watched: WatchedMap;
@@ -576,8 +578,17 @@ function RankingView({
   votes: Record<string, string[]>;
   userDid: string | null;
   onVote: (channelId: string) => void;
+  defaultTab?: RankingTab;
 }) {
-  const [rankingTab, setRankingTab] = useState<RankingTab>("posts");
+  const [rankingTab, setRankingTab] = useState<RankingTab>(defaultTab);
+
+  // Update URL when tab changes (for deeplinking)
+  const updateTab = (tab: RankingTab) => {
+    setRankingTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", url.toString());
+  };
 
   // Build per-channel stats
   const channelStats = new Map<string, { id: string; name: string; color: string; total: number; watched: number }>();
@@ -876,7 +887,14 @@ export default function VlogCalendarClient({
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
-  const [viewMode, setViewMode] = useState<"calendar" | "ranking">("calendar");
+
+  // Read initial state from URL params for deeplinking
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialViewMode = tabParam === "posts" || tabParam === "popular" ? "ranking" : "calendar";
+  const initialRankingTab = tabParam === "posts" || tabParam === "popular" ? tabParam : "posts";
+
+  const [viewMode, setViewMode] = useState<"calendar" | "ranking">(initialViewMode);
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
   const [activeMonth, setActiveMonth] = useState<"june" | "july">("june");
@@ -1135,7 +1153,7 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={activeDays} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} />
+          <RankingView days={activeDays} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} defaultTab={initialRankingTab as RankingTab} />
         ) : (
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
