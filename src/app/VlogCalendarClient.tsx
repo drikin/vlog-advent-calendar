@@ -1135,7 +1135,18 @@ export default function VlogCalendarClient({
               {showUnwatchedOnly ? "🟢 未視聴のみ表示中" : "⚪ 全動画表示"}
             </button>
             <button
-              onClick={() => setViewMode(viewMode === "calendar" ? "ranking" : "calendar")}
+              onClick={() => {
+                const newMode = viewMode === "calendar" ? "ranking" : "calendar";
+                setViewMode(newMode);
+                // Update URL for deeplinking
+                const url = new URL(window.location.href);
+                if (newMode === "ranking") {
+                  url.searchParams.set("tab", "posts");
+                } else {
+                  url.searchParams.delete("tab");
+                }
+                window.history.replaceState({}, "", url.toString());
+              }}
               className={`text-xs px-3 py-1 rounded-full border transition-colors ${
                 viewMode === "ranking"
                   ? "bg-amber-900/40 text-amber-400 border-amber-700/50"
