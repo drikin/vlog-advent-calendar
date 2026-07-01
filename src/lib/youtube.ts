@@ -126,14 +126,12 @@ export async function fetchAllVideosWithFallback(
   }
 }
 
-/** Group videos by date (UTC date, June 2026 only) */
-export function groupByDate(videos: YouTubeVideo[]): DayVideos[] {
+/** Group videos by date for a given month */
+export function groupByDate(videos: YouTubeVideo[], monthPrefix: string = "2026-06"): DayVideos[] {
   const map = new Map<string, YouTubeVideo[]>();
   for (const v of videos) {
-    // Use UTC date from publishedAt ISO string directly
-    const date = v.publishedAt.slice(0, 10); // "2026-06-02"
-    // June 2026 only
-    if (!date.startsWith("2026-06")) continue;
+    const date = v.publishedAt.slice(0, 10);
+    if (!date.startsWith(monthPrefix)) continue;
     if (!map.has(date)) map.set(date, []);
     map.get(date)!.push(v);
   }

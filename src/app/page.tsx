@@ -10,12 +10,14 @@ export const dynamic = "force-dynamic";
 
 /** Server Component: fetch YouTube data + auth state at request time */
 export default async function Home() {
-  let days: DayVideos[] = [];
+  let juneDays: DayVideos[] = [];
+  let julyDays: DayVideos[] = [];
   let error: string | null = null;
 
   try {
     const videos = await fetchAllVideos(CHANNELS);
-    days = groupByDate(videos);
+    juneDays = groupByDate(videos, "2026-06");
+    julyDays = groupByDate(videos, "2026-07");
   } catch (e) {
     error = String(e);
   }
@@ -48,7 +50,8 @@ export default async function Home() {
 
   return (
     <VlogCalendarClient
-      days={days}
+      juneDays={juneDays}
+      julyDays={julyDays}
       error={error}
       channels={CHANNELS}
       updatedAt={new Date().toISOString()}

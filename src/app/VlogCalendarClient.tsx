@@ -685,7 +685,8 @@ function CtaBar() {
 /* ─── Main Component ─── */
 
 export default function VlogCalendarClient({
-  days,
+  juneDays,
+  julyDays,
   error,
   channels,
   updatedAt,
@@ -694,7 +695,8 @@ export default function VlogCalendarClient({
   userDisplayName,
   votes,
 }: {
-  days: DayVideos[];
+  juneDays: DayVideos[];
+  julyDays: DayVideos[];
   error: string | null;
   channels: Channel[];
   updatedAt: string;
@@ -708,6 +710,8 @@ export default function VlogCalendarClient({
   const [viewMode, setViewMode] = useState<"calendar" | "ranking">("calendar");
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
+  const [activeMonth, setActiveMonth] = useState<"june" | "july">("june");
+  const [julyUnlocked, setJulyUnlocked] = useState(false);
 
   // Session keepalive: ping every 5 minutes while logged in
   useEffect(() => {
@@ -825,17 +829,21 @@ export default function VlogCalendarClient({
     );
   }
 
-  // Build a map of date->videos for all June dates
-  const videoMap = new Map(days.map((d) => [d.date, d.videos]));
-  const daysInJune = 30;
-  const juneDates = Array.from({ length: daysInJune }, (_, i) => {
+  // Build a map of date->videos for the active month
+  const activeDays = activeMonth === "june" ? juneDays : julyDays;
+  const monthPrefix = activeMonth === "june" ? "2026-06" : "2026-07";
+  const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07 🆕";
+  const daysInMonth = activeMonth === "june" ? 30 : 31;
+
+  const videoMap = new Map(activeDays.map((d) => [d.date, d.videos]));
+  const monthDates = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
-    const dateStr = `2026-06-${String(day).padStart(2, "0")}`;
+    const dateStr = `${monthPrefix}-${String(day).padStart(2, "0")}`;
     return { date: dateStr, videos: videoMap.get(dateStr) || [] };
   });
 
-  const totalVideos = days.reduce((s, d) => s + d.videos.length, 0);
-  const watchedCount = days.reduce(
+  const totalVideos = activeDays.reduce((s, d) => s + d.videos.length, 0);
+  const watchedCount = activeDays.reduce(
     (s, d) => s + d.videos.filter((v) => watched.has(v.videoId)).length,
     0
   );
@@ -848,7 +856,7 @@ export default function VlogCalendarClient({
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl md:text-3xl font-bold text-center">
             📹 BSM地獄のVLOG強化月間
-            <span className="text-gray-400 font-normal ml-2">2026.06</span>
+            <span className="text-gray-400 font-normal ml-2">{monthLabel}</span>
           </h1>
           <p className="text-center text-gray-400 mt-2 text-sm">
             参加メンバーの毎日のVLOGをチェック！脱落したらドリキン賞です(爆)
@@ -904,6 +912,31 @@ export default function VlogCalendarClient({
             </div>
           )}
           <div className="flex justify-center mt-3 gap-2">
+            {/* Month tabs */}
+            <div className="flex gap-1 bg-gray-800/50 rounded-full p-0.5 border border-gray-700/50">
+              <button
+                onClick={() => setActiveMonth("june")}
+                className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                  activeMonth === "june"
+                    ? "bg-gray-700 text-white font-medium"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                2026.06
+              </button>
+              {julyUnlocked && (
+                <button
+                  onClick={() => setActiveMonth("july")}
+                  className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                    activeMonth === "july"
+                      ? "bg-amber-700 text-amber-100 font-medium"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  2026.07 🆕
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setShowUnwatchedOnly(!showUnwatchedOnly)}
               className={`text-xs px-3 py-1 rounded-full border transition-colors ${
@@ -933,11 +966,11 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={days} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} />
+          <RankingView days={activeDays} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} />
         ) : (
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
-          {juneDates.map(({ date, videos }) => {
+          {monthDates.map(({ date, videos }) => {
             let filtered = showUnwatchedOnly
               ? videos.filter((v) => !watched.has(v.videoId))
               : videos;
@@ -951,7 +984,7 @@ export default function VlogCalendarClient({
         </div>
 
         <div className="md:hidden space-y-4">
-          {juneDates
+          {monthDates
             .map(({ date, videos }) => {
               let filtered = showUnwatchedOnly
                 ? videos.filter((v) => !watched.has(v.videoId))
@@ -976,7 +1009,18 @@ export default function VlogCalendarClient({
       </main>
 
       <footer className="border-t border-gray-800 py-4 text-center text-gray-600 text-xs">
-        Made with ❤️ for BSM地獄のVLOG強化月間 2026.06
+        <span
+          onClick={() => setJulyUnlocked(true)}
+          className="cursor-default select-none"
+          title="🎉"
+        >
+          Made with ❤️ for BSM地獄のVLOG強化月間 2026.06
+        </span>
+        {julyUnlocked && (
+          <p className="text-amber-600/50 mt-1 text-[10px]">
+            🔓 7月カレンダー解放済み
+          </p>
+        )}
       </footer>
     </div>
   );
