@@ -351,6 +351,8 @@ function RsvpManager({
   const [status, setStatus] = useState<RsvpStatus>("confirmed");
   const [loading, setLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [details, setDetails] = useState<Record<string, string> | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
   // Load from API on mount
   useEffect(() => {
@@ -363,14 +365,29 @@ function RsvpManager({
       .finally(() => setLoading(false));
   }, []);
 
-  const refresh = useCallback(() => {
-    fetch("/api/rsvp")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.entries) setEntries(data.entries);
-      })
-      .catch(() => {});
+  // Load event details if user is registered
+  const loadDetails = useCallback(async () => {
+    setDetailsError(null);
+    try {
+      const res = await fetch("/api/rsvp/details");
+      if (!res.ok) {
+        const data = await res.json();
+        setDetailsError(data.error || "情報を取得できませんでした");
+        return;
+      }
+      const data = await res.json();
+      if (data.details) setDetails(data.details);
+    } catch {
+      setDetailsError("通信エラー");
+    }
   }, []);
+
+  // Load event details on mount if user is already registered
+  useEffect(() => {
+    if (userDid) {
+      loadDetails();
+    }
+  }, [userDid, loadDetails]);
 
   // Pre-fill name from user's existing entry
   const userEntry = entries.find((e) => e.did === userDid);
@@ -397,6 +414,8 @@ function RsvpManager({
         return;
       }
       if (data.entries) setEntries(data.entries);
+      // Load event details after successful registration
+      loadDetails();
     } catch {
       setSubmitError("通信エラーが発生しました");
     }
@@ -415,6 +434,8 @@ function RsvpManager({
       });
       const data = await res.json();
       if (data.entries) setEntries(data.entries);
+      // Hide details after unregistering
+      setDetails(null);
     } catch {}
   };
 
@@ -439,9 +460,27 @@ function RsvpManager({
             🎓 デスブログ卒業式 オフ会
           </h2>
           <p className="text-gray-400 mt-1 text-sm">
-            2026年7月4日（土） — 詳細調整中。参加希望の方は登録してください！
+            2026年7月4日（土） — 参加希望の方は登録してください！
           </p>
         </div>
+
+        {/* Event details — only visible to registered participants */}
+        {details && (
+          <div className="max-w-lg mx-auto mb-6 bg-gradient-to-br from-amber-950/30 to-orange-950/20 border border-amber-700/40 rounded-lg p-5 text-sm">
+            <p className="text-amber-300 font-bold text-base mb-3">🎉 オフ会詳細</p>
+            <div className="space-y-2 text-gray-300">
+              <p><span className="text-gray-500">📅</span> {details.date} {details.time}</p>
+              <p><span className="text-gray-500">📍</span> {details.venue}</p>
+              <p><span className="text-gray-500">💰</span> {details.price}</p>
+              {details.note && (
+                <p className="text-gray-400 text-xs mt-2">{details.note}</p>
+              )}
+            </div>
+          </div>
+        )}
+        {detailsError && (
+          <p className="text-center text-gray-500 text-xs mb-4">{detailsError}</p>
+        )}
 
         {/* Status summary */}
         <div className="flex flex-wrap justify-center gap-3 mb-6 text-sm">
