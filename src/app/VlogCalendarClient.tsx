@@ -765,9 +765,19 @@ function PopularRanking({
     <div>
       <h2 className="text-xl md:text-2xl font-bold text-center mb-1">❤️ 人気チャンネルランキング</h2>
       <p className="text-gray-500 text-xs text-center mb-1">応援❤️が多い順</p>
+
+      {/* Rules card */}
+      <div className="max-w-lg mx-auto mb-6 bg-gray-800/30 border border-gray-700/30 rounded-lg p-4 text-xs text-gray-400 space-y-1.5">
+        <p className="text-gray-300 font-medium mb-1">📋 投票ルール</p>
+        <p>• 各チャンネルの ❤️ ボタンを押して応援しよう！</p>
+        <p>• 1人 <strong className="text-pink-400">最大3チャンネル</strong> まで投票できます</p>
+        <p>• もう一度押すと投票を取り消せます（枠が戻るよ）</p>
+        <p>• 投票するには <strong className="text-blue-400">Bluesky アカウント</strong> でログインが必要です</p>
+      </div>
+
       {userDid && (
-        <p className="text-gray-500 text-xs text-center mb-6">
-          残り投票枠: {remainingVotes}/3
+        <p className="text-gray-500 text-xs text-center mb-4">
+          残り投票枠: <span className="text-pink-400 font-medium">{remainingVotes}</span>/3
         </p>
       )}
       {!userDid && (
