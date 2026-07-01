@@ -560,6 +560,8 @@ function RsvpManager({
 
 /* ─── Ranking View ─── */
 
+type RankingTab = "posts" | "popular";
+
 function RankingView({
   days,
   watched,
@@ -575,6 +577,8 @@ function RankingView({
   userDid: string | null;
   onVote: (channelId: string) => void;
 }) {
+  const [rankingTab, setRankingTab] = useState<RankingTab>("posts");
+
   // Build per-channel stats
   const channelStats = new Map<string, { id: string; name: string; color: string; total: number; watched: number }>();
   for (const ch of channels) {
@@ -591,67 +595,208 @@ function RankingView({
     }
   }
 
-  const sorted = Array.from(channelStats.values())
-    .filter((s) => s.total > 0)
-    .sort((a, b) => b.total - a.total);
+  const channelList = Array.from(channelStats.values()).filter((s) => s.total > 0);
 
-  const maxTotal = sorted.length > 0 ? sorted[0].total : 1;
+  // Sort by posts
+  const byPosts = [...channelList].sort((a, b) => b.total - a.total);
+  const maxTotal = byPosts.length > 0 ? byPosts[0].total : 1;
+
+  // Sort by votes
+  const byVotes = [...channelList].sort((a, b) => {
+    const va = votes[a.id]?.length || 0;
+    const vb = votes[b.id]?.length || 0;
+    if (vb !== va) return vb - va;
+    return b.total - a.total; // tiebreaker: posts
+  });
+  const maxVotes = byVotes.length > 0 ? (votes[byVotes[0].id]?.length || 0) : 1;
 
   return (
     <div className="mt-12 border-t border-gray-800 pt-8">
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-xl md:text-2xl font-bold text-center mb-2">🏆 更新頻度ランキング</h2>
-        <p className="text-gray-500 text-xs text-center mb-6">6月の動画投稿数順</p>
-        <div className="space-y-3">
-          {sorted.map((ch, idx) => {
-            const pct = maxTotal > 0 ? (ch.total / maxTotal) * 100 : 0;
-            const watchedPct = ch.total > 0 ? (ch.watched / ch.total) * 100 : 0;
-            const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
-            const voteCount = votes[ch.id]?.length || 0;
-            const hasVoted = userDid ? (votes[ch.id] || []).includes(userDid) : false;
-            const myTotalVotes = userDid ? Object.values(votes).filter((v) => v.includes(userDid)).length : 0;
-            const remainingVotes = Math.max(0, 3 - myTotalVotes);
-            return (
-              <div
-                key={ch.name}
-                className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{medal}</span>
-                    <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => onVote(ch.id)}
-                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-all ${
-                        hasVoted
-                          ? "bg-pink-900/40 text-pink-400 border-pink-700/50 shadow-lg shadow-pink-900/20"
-                          : "bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-pink-500/50 hover:text-pink-400"
-                      }`}
-                    >
-                      <span>{hasVoted ? "❤️" : "🤍"}</span>
-                      <span>{voteCount}</span>
-                    </button>
-                    <span className="text-sm text-gray-300 font-medium">{ch.total} 本</span>
-                  </div>
+        {/* Tab switcher */}
+        <div className="flex justify-center mb-6">
+          <div className="flex gap-1 bg-gray-800/50 rounded-full p-0.5 border border-gray-700/50">
+            <button
+              onClick={() => setRankingTab("posts")}
+              className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
+                rankingTab === "posts"
+                  ? "bg-gray-700 text-white font-medium"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              📊 投稿数
+            </button>
+            <button
+              onClick={() => setRankingTab("popular")}
+              className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
+                rankingTab === "popular"
+                  ? "bg-pink-800/60 text-pink-200 font-medium"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              ❤️ 人気
+            </button>
+          </div>
+        </div>
+
+        {rankingTab === "posts" ? (
+          <PostsRanking
+            channels={byPosts}
+            maxTotal={maxTotal}
+            votes={votes}
+            userDid={userDid}
+            onVote={onVote}
+          />
+        ) : (
+          <PopularRanking
+            channels={byVotes}
+            maxVotes={maxVotes}
+            votes={votes}
+            userDid={userDid}
+            onVote={onVote}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Posts Ranking ─── */
+
+function PostsRanking({
+  channels,
+  maxTotal,
+  votes,
+  userDid,
+  onVote,
+}: {
+  channels: { id: string; name: string; color: string; total: number; watched: number }[];
+  maxTotal: number;
+  votes: Record<string, string[]>;
+  userDid: string | null;
+  onVote: (channelId: string) => void;
+}) {
+  return (
+    <div>
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-1">📊 投稿数ランキング</h2>
+      <p className="text-gray-500 text-xs text-center mb-6">今月の動画投稿数順</p>
+      <div className="space-y-3">
+        {channels.map((ch, idx) => {
+          const pct = maxTotal > 0 ? (ch.total / maxTotal) * 100 : 0;
+          const watchedPct = ch.total > 0 ? (ch.watched / ch.total) * 100 : 0;
+          const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+          const voteCount = votes[ch.id]?.length || 0;
+          return (
+            <div
+              key={ch.name}
+              className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{medal}</span>
+                  <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
                 </div>
-                {/* Bar: total */}
-                <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, backgroundColor: ch.color }}
-                  />
-                </div>
-                {/* Watched overlay */}
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>視聴済み: {ch.watched}/{ch.total}</span>
-                  <span>{watchedPct.toFixed(0)}%</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-300 font-medium">{ch.total} 本</span>
                 </div>
               </div>
-            );
-          })}
-        </div>
+              {/* Bar: total */}
+              <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: ch.color }}
+                />
+              </div>
+              {/* Watched + votes */}
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>視聴済み: {ch.watched}/{ch.total} ({watchedPct.toFixed(0)}%)</span>
+                <span>❤️ {voteCount}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Popular Ranking ─── */
+
+function PopularRanking({
+  channels,
+  maxVotes,
+  votes,
+  userDid,
+  onVote,
+}: {
+  channels: { id: string; name: string; color: string; total: number; watched: number }[];
+  maxVotes: number;
+  votes: Record<string, string[]>;
+  userDid: string | null;
+  onVote: (channelId: string) => void;
+}) {
+  const myTotalVotes = userDid ? Object.values(votes).filter((v) => v.includes(userDid)).length : 0;
+  const remainingVotes = Math.max(0, 3 - myTotalVotes);
+
+  return (
+    <div>
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-1">❤️ 人気チャンネルランキング</h2>
+      <p className="text-gray-500 text-xs text-center mb-1">応援❤️が多い順</p>
+      {userDid && (
+        <p className="text-gray-500 text-xs text-center mb-6">
+          残り投票枠: {remainingVotes}/3
+        </p>
+      )}
+      {!userDid && (
+        <p className="text-gray-500 text-xs text-center mb-6">
+          ログインして❤️で応援しよう！
+        </p>
+      )}
+      <div className="space-y-3">
+        {channels.map((ch, idx) => {
+          const voteCount = votes[ch.id]?.length || 0;
+          const hasVoted = userDid ? (votes[ch.id] || []).includes(userDid) : false;
+          const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
+          const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+          return (
+            <div
+              key={ch.name}
+              className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{medal}</span>
+                  <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => onVote(ch.id)}
+                    className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-all ${
+                      hasVoted
+                        ? "bg-pink-900/40 text-pink-400 border-pink-700/50 shadow-lg shadow-pink-900/20"
+                        : "bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-pink-500/50 hover:text-pink-400"
+                    }`}
+                  >
+                    <span>{hasVoted ? "❤️" : "🤍"}</span>
+                    <span>{voteCount}</span>
+                  </button>
+                  <span className="text-xs text-gray-500">{ch.total} 本</span>
+                </div>
+              </div>
+              {/* Vote bar */}
+              <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: "#f472b6" }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>投稿: {ch.total}本</span>
+                <span>視聴率: {ch.total > 0 ? ((ch.watched / ch.total) * 100).toFixed(0) : 0}%</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
