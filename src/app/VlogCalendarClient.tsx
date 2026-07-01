@@ -571,6 +571,7 @@ function RankingView({
   userDid,
   onVote,
   defaultTab = "posts",
+  onTabChange,
 }: {
   days: DayVideos[];
   watched: WatchedMap;
@@ -579,12 +580,14 @@ function RankingView({
   userDid: string | null;
   onVote: (channelId: string) => void;
   defaultTab?: RankingTab;
+  onTabChange?: (tab: RankingTab) => void;
 }) {
   const [rankingTab, setRankingTab] = useState<RankingTab>(defaultTab);
 
   // Update URL when tab changes (for deeplinking)
   const updateTab = (tab: RankingTab) => {
     setRankingTab(tab);
+    onTabChange?.(tab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", tab);
     window.history.replaceState({}, "", url.toString());
@@ -899,6 +902,8 @@ export default function VlogCalendarClient({
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
   const [activeMonth, setActiveMonth] = useState<"june" | "july">("june");
   const [julyUnlocked, setJulyUnlocked] = useState(false);
+  // Remember last active ranking tab across view mode switches
+  const [lastRankingTab, setLastRankingTab] = useState<RankingTab>(initialRankingTab);
 
   // Session keepalive: ping every 5 minutes while logged in
   useEffect(() => {
@@ -1141,7 +1146,7 @@ export default function VlogCalendarClient({
                 // Update URL for deeplinking
                 const url = new URL(window.location.href);
                 if (newMode === "ranking") {
-                  url.searchParams.set("tab", "posts");
+                  url.searchParams.set("tab", lastRankingTab);
                 } else {
                   url.searchParams.delete("tab");
                 }
@@ -1164,7 +1169,7 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={activeDays} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} defaultTab={initialRankingTab as RankingTab} />
+          <RankingView days={activeDays} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
         ) : (
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
