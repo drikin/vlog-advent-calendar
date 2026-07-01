@@ -735,8 +735,17 @@ function PopularRanking({
   userDid: string | null;
   onVote: (channelId: string) => void;
 }) {
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const myTotalVotes = userDid ? Object.values(votes).filter((v) => v.includes(userDid)).length : 0;
   const remainingVotes = Math.max(0, 3 - myTotalVotes);
+
+  const handleVoteClick = (channelId: string) => {
+    if (!userDid) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    onVote(channelId);
+  };
 
   return (
     <div>
@@ -751,6 +760,21 @@ function PopularRanking({
         <p className="text-gray-500 text-xs text-center mb-6">
           ログインして❤️で応援しよう！
         </p>
+      )}
+      {/* Login prompt overlay */}
+      {showLoginPrompt && !userDid && (
+        <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-6 mb-6 text-center">
+          <p className="text-gray-300 text-sm mb-3">
+            ❤️ で応援するにはログインが必要です
+          </p>
+          <LoginForm />
+          <button
+            onClick={() => setShowLoginPrompt(false)}
+            className="mt-3 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            キャンセル
+          </button>
+        </div>
       )}
       <div className="space-y-3">
         {channels.map((ch, idx) => {
@@ -770,7 +794,7 @@ function PopularRanking({
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => onVote(ch.id)}
+                    onClick={() => handleVoteClick(ch.id)}
                     className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-all ${
                       hasVoted
                         ? "bg-pink-900/40 text-pink-400 border-pink-700/50 shadow-lg shadow-pink-900/20"
