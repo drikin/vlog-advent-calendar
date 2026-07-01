@@ -1,5 +1,5 @@
-import { CHANNELS } from "@/config/channels";
 import { fetchAllVideos, groupByDate, type DayVideos } from "@/lib/youtube";
+import { getMembers } from "@/lib/members";
 import VlogCalendarClient from "./VlogCalendarClient";
 import { getSession } from "@/lib/auth/session";
 import { resolveProfile } from "@/lib/auth/did-resolver";
@@ -14,8 +14,18 @@ export default async function Home() {
   let julyDays: DayVideos[] = [];
   let error: string | null = null;
 
+  // Fetch member lists from Redis (fallback to defaults)
+  const juneChannels = await getMembers("2026-06");
+  const julyChannels = await getMembers("2026-07");
+
+  // All unique channels across both months
+  const allChannels = [...juneChannels, ...julyChannels].filter(
+    (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
+  );
+
   try {
-    const videos = await fetchAllVideos(CHANNELS);
+    // Fetch videos for all unique channels across both months
+    const videos = await fetchAllVideos(allChannels);
     juneDays = groupByDate(videos, "2026-06");
     julyDays = groupByDate(videos, "2026-07");
   } catch (e) {
@@ -43,7 +53,7 @@ export default async function Home() {
   // Fetch votes
   let votes: Record<string, string[]> = {};
   try {
-    votes = await getAllVotes();
+    votes = await getAllVotes(allChannels);
   } catch {
     // ignore
   }
@@ -53,7 +63,8 @@ export default async function Home() {
       juneDays={juneDays}
       julyDays={julyDays}
       error={error}
-      channels={CHANNELS}
+      channels={juneChannels}
+      channelsJuly={julyChannels}
       updatedAt={new Date().toISOString()}
       userDid={userDid}
       userHandle={userHandle}

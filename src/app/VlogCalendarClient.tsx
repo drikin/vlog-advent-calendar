@@ -921,6 +921,7 @@ export default function VlogCalendarClient({
   julyDays,
   error,
   channels,
+  channelsJuly,
   updatedAt,
   userDid,
   userHandle,
@@ -931,6 +932,7 @@ export default function VlogCalendarClient({
   julyDays: DayVideos[];
   error: string | null;
   channels: Channel[];
+  channelsJuly: Channel[];
   updatedAt: string;
   userDid: string | null;
   userHandle: string | null;
@@ -1072,6 +1074,7 @@ export default function VlogCalendarClient({
 
   // Build a map of date->videos for the active month
   const activeDays = activeMonth === "june" ? juneDays : julyDays;
+  const activeChannels = activeMonth === "june" ? channels : channelsJuly;
   const monthPrefix = activeMonth === "june" ? "2026-06" : "2026-07";
   const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07 🆕";
   const daysInMonth = activeMonth === "june" ? 30 : 31;
@@ -1124,7 +1127,7 @@ export default function VlogCalendarClient({
             </div>
           )}
           <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {channels.map((ch) => {
+            {activeChannels.map((ch) => {
               const isActive = activeChannelFilter === ch.id;
               return (
                 <button
@@ -1218,7 +1221,7 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={activeDays} watched={watched} channels={channels} votes={voteState} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
+          <RankingView days={activeDays} watched={watched} channels={activeChannels} votes={voteState} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
         ) : (
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
@@ -1230,7 +1233,7 @@ export default function VlogCalendarClient({
               filtered = filtered.filter((v) => v.channelId === activeChannelFilter);
             }
             return (
-              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={channels} />
+              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} />
             );
           })}
         </div>
@@ -1248,7 +1251,7 @@ export default function VlogCalendarClient({
             })
             .filter((d) => d.videos.length > 0)
             .map(({ date, videos }) => (
-              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={channels} />
+              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} />
             ))}
         </div>
           </>

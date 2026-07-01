@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import { CHANNELS } from "@/config/channels";
+import type { Channel } from "@/config/channels";
 
 function getRedis(): Redis | null {
   if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN)
@@ -72,24 +72,35 @@ async function migrateOldVotes(redis: Redis): Promise<void> {
 /**
  * Read all channel votes in a single pipeline (efficient, atomic reads).
  */
-export async function getAllVotes(): Promise<Record<string, string[]>> {
+export async function getAllVotes(channels?: Channel[]): Promise<Record<string, string[]>> {
   const redis = getRedis();
   if (!redis) return {};
+
+  // If no channels provided, try to get from Redis, fall back to empty
+  let chList = channels;
+  if (!chList) {
+    try {
+      const { getMembers } = await import("./members");
+      chList = await getMembers("2026-06");
+    } catch {
+      chList = [];
+    }
+  }
 
   try {
     await migrateOldVotes(redis);
 
     const pipeline = redis.pipeline();
-    for (const ch of CHANNELS) {
+    for (const ch of chList) {
       pipeline.smembers(chKey(ch.id));
     }
     const results = await pipeline.exec();
 
     const votes: Record<string, string[]> = {};
-    for (let i = 0; i < CHANNELS.length; i++) {
+    for (let i = 0; i < chList.length; i++) {
       const members = results[i] as string[];
       if (members && members.length > 0) {
-        votes[CHANNELS[i].id] = members;
+        votes[chList[i].id] = members;
       }
     }
     return votes;

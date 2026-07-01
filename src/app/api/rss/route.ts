@@ -1,4 +1,4 @@
-import { CHANNELS } from "@/config/channels";
+import { getMembers } from "@/lib/members";
 import { fetchAllVideos } from "@/lib/youtube";
 import { NextResponse } from "next/server";
 
@@ -12,7 +12,16 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const baseUrl = `${url.protocol}//${url.host}`;
 
-  let videos = await fetchAllVideos(CHANNELS);
+  // Fetch all channels from both June and July
+  const [juneCh, julyCh] = await Promise.all([
+    getMembers("2026-06"),
+    getMembers("2026-07"),
+  ]);
+  const allChannels = [...juneCh, ...julyCh].filter(
+    (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
+  );
+
+  let videos = await fetchAllVideos(allChannels);
   // Sort newest first for RSS
   videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   // Limit to last 100 entries
