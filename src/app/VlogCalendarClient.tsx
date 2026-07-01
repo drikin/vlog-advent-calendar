@@ -631,7 +631,7 @@ function RankingView({
         <div className="flex justify-center mb-6">
           <div className="flex gap-1 bg-gray-800/50 rounded-full p-0.5 border border-gray-700/50">
             <button
-              onClick={() => setRankingTab("posts")}
+              onClick={() => updateTab("posts")}
               className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
                 rankingTab === "posts"
                   ? "bg-gray-700 text-white font-medium"
@@ -641,7 +641,7 @@ function RankingView({
               📊 投稿数
             </button>
             <button
-              onClick={() => setRankingTab("popular")}
+              onClick={() => updateTab("popular")}
               className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
                 rankingTab === "popular"
                   ? "bg-pink-800/60 text-pink-200 font-medium"
