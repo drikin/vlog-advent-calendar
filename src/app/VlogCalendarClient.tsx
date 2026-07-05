@@ -935,7 +935,9 @@ export default function VlogCalendarClient({
       className="min-h-screen text-white transition-colors duration-700"
       style={{
         backgroundColor: theme.bgBase,
-        backgroundImage: `linear-gradient(to bottom, ${theme.bgGradFrom}, ${theme.bgGradTo}), ${theme.bgPattern}`,
+        backgroundImage: theme.bgPattern
+          ? `linear-gradient(to bottom, ${theme.bgGradFrom}, ${theme.bgGradTo}), ${theme.bgPattern}`
+          : `linear-gradient(to bottom, ${theme.bgGradFrom}, ${theme.bgGradTo})`,
       }}
     >
       <header className="border-b transition-colors duration-500" style={{ borderColor: theme.headerBorder }}>
