@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
-import VideoModal from "@/components/VideoModal";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -102,14 +101,12 @@ function VideoCard({
   watchedAt,
   onWatch,
   channels,
-  onPlay,
 }: {
   video: YouTubeVideo;
   watched: boolean;
   watchedAt: string | null;
   onWatch: (id: string) => void;
   channels: Channel[];
-  onPlay?: (videoId: string) => void;
 }) {
   const color = getChannelColor(video.channelId, channels);
 
@@ -119,20 +116,18 @@ function VideoCard({
     : null;
 
   return (
-    <button
-      onClick={() => { if (onPlay) { onPlay(video.videoId); onWatch(video.videoId); } else { window.open(`https://youtube.com/watch?v=${video.videoId}`, "_blank"); } }}
-      className={`group block rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-black/20 text-left w-full ${
+    <a
+      href={`https://youtube.com/watch?v=${video.videoId}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => onWatch(video.videoId)}
+      className={`group block rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-black/20 ${
         watched
           ? "bg-gray-900/80 border-green-800/50 opacity-70"
           : "bg-gray-800/50 border-gray-700/50 hover:border-gray-500/50"
       }`}
     >
       <div className="aspect-video bg-gray-700 relative overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none">
-          <div className="w-10 h-10 rounded-full bg-white/80 group-hover:bg-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-            <svg className="w-5 h-5 text-gray-900 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-        </div>
         <img
           src={video.thumbnail}
           alt={video.title}
@@ -175,7 +170,7 @@ function VideoCard({
           {video.channelName}
         </p>
       </div>
-    </button>
+    </a>
   );
 }
 
@@ -187,14 +182,12 @@ function DayCell({
   watched,
   onWatch,
   channels,
-  onPlay,
 }: {
   date: string;
   videos: YouTubeVideo[];
   watched: WatchedMap;
   onWatch: (id: string) => void;
   channels: Channel[];
-  onPlay: (id: string) => void;
 }) {
   const day = parseInt(date.split("-")[2], 10);
   const dayOfWeek = getDayOfWeek(date);
@@ -249,7 +242,6 @@ function DayCell({
             watched={watched.has(v.videoId)}
             watchedAt={watched.get(v.videoId) ?? null}
             onWatch={onWatch}
-            onPlay={onPlay}
             channels={channels}
           />
         ))}
@@ -768,9 +760,6 @@ export default function VlogCalendarClient({
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
-  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [autoPlayNext, setAutoPlayNext] = useState(true);
 
   // Read initial state from URL params for deeplinking
   const searchParams = useSearchParams();
@@ -924,57 +913,6 @@ export default function VlogCalendarClient({
     const dateStr = `${monthPrefix}-${String(day).padStart(2, "0")}`;
     return { date: dateStr, videos: videoMap.get(dateStr) || [] };
   });
-
-  const playList = useMemo(() => {
-    return activeDays.flatMap(d => d.videos);
-  }, [activeDays]);
-
-  const playingIndex = playingVideoId ? playList.findIndex(v => v.videoId === playingVideoId) : -1;
-
-  const openPlayer = useCallback((videoId: string) => {
-    setPlayingVideoId(videoId);
-    setIsModalOpen(true);
-    handleWatch(videoId);
-  }, [handleWatch]);
-
-  const closePlayer = useCallback(() => {
-    setIsModalOpen(false);
-    setTimeout(() => setPlayingVideoId(null), 100);
-  }, []);
-
-  const playNext = useCallback(() => {
-    // 未読のみモード: 次の未視聴動画を探す（現在位置より後）
-    if (autoPlayNext) {
-      const unwatchedAfter = playList.slice(playingIndex + 1).filter(v => !watched.has(v.videoId));
-      if (unwatchedAfter.length > 0) {
-        const next = unwatchedAfter[0];
-        setPlayingVideoId(next.videoId);
-        handleWatch(next.videoId);
-        return;
-      }
-    }
-    // 全再生モードまたは未読がなければ次へ
-    if (playingIndex < playList.length - 1) {
-      const next = playList[playingIndex + 1];
-      setPlayingVideoId(next.videoId);
-      handleWatch(next.videoId);
-    }
-  }, [playingIndex, playList, watched, autoPlayNext, handleWatch]);
-
-  const playPrev = useCallback(() => {
-    if (playingIndex > 0) {
-      const prev = playList[playingIndex - 1];
-      setPlayingVideoId(prev.videoId);
-      handleWatch(prev.videoId);
-    }
-  }, [playingIndex, playList, handleWatch]);
-
-  const onVideoEnded = useCallback(() => {
-    if (playingIndex < playList.length - 1) {
-      playNext();
-    }
-    // 最後の動画ならそのまま停止（モーダルは開いたまま）
-  }, [playingIndex, playList.length, playNext]);
 
   const totalVideos = activeDays.reduce((s, d) => s + d.videos.length, 0);
   const watchedCount = activeDays.reduce(
@@ -1160,7 +1098,7 @@ export default function VlogCalendarClient({
               filtered = filtered.filter((v) => v.channelId === activeChannelFilter);
             }
             return (
-              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} onPlay={openPlayer} />
+              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} />
             );
           })}
         </div>
@@ -1178,37 +1116,13 @@ export default function VlogCalendarClient({
             })
             .filter((d) => d.videos.length > 0)
             .map(({ date, videos }) => (
-              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} onPlay={openPlayer} />
+              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} />
             ))}
         </div>
           </>
         )}
 
       </main>
-
-      {isModalOpen && playingVideoId && (() => {
-        const video = playList.find(v => v.videoId === playingVideoId);
-        if (!video) return null;
-        const color = getChannelColor(video.channelId, activeChannels);
-        return (
-          <VideoModal
-            videoId={playingVideoId}
-            title={video.title}
-            channelName={video.channelName}
-            channelColor={color}
-            onClose={closePlayer}
-            onNext={playNext}
-            onPrev={playPrev}
-            onEnded={onVideoEnded}
-            hasNext={playingIndex < playList.length - 1}
-            hasPrev={playingIndex > 0}
-            autoPlayNext={autoPlayNext}
-            onToggleAutoPlay={() => setAutoPlayNext(p => !p)}
-            watchedCount={playList.filter(v => watched.has(v.videoId)).length}
-            totalInPlaylist={playList.length}
-          />
-        );
-      })()}
 
       <footer className="border-t border-gray-800 py-4 text-center text-gray-600 text-xs">
         Made with ❤️ for デスブロカレンダー 2026
