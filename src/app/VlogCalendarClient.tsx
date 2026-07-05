@@ -931,16 +931,6 @@ export default function VlogCalendarClient({
               📹 デスブロカレンダー
               <span className="text-gray-400 font-normal ml-2">{monthLabel}</span>
             </h1>
-            {activeMonth === "july" && (
-              <a
-                href="https://www.youtube.com/playlist?list=PLLEoWx5iB0RI"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-sm text-red-500 hover:text-red-400 transition-colors"
-              >
-                ▶ YouTubeプレイリストで連続再生
-              </a>
-            )}
           </div>
           {/* Login widget — right-aligned on md+, below title on mobile */}
           <div className="flex justify-end mt-3 md:absolute md:right-0 md:top-0 md:mt-0 shrink-0 text-right">
