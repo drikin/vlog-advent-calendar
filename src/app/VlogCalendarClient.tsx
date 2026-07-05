@@ -769,6 +769,7 @@ export default function VlogCalendarClient({
 
   const [viewMode, setViewMode] = useState<"calendar" | "ranking">(initialViewMode);
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
+  const [subOpen, setSubOpen] = useState(false);
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
   const [activeMonth, setActiveMonth] = useState<"june" | "july">("july");
 
@@ -1010,6 +1011,44 @@ export default function VlogCalendarClient({
               🔥数字は2026年以降の連続更新日数（24時間ごとに更新）
             </p>
           )}
+          {/* Channel subscription list */}
+          <div className="mt-6 max-w-lg mx-auto">
+            <button
+              onClick={() => setSubOpen(!subOpen)}
+              className="mx-auto block text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              📺 チャンネル一覧 {subOpen ? "▲" : "▼"}
+            </button>
+            {subOpen && (
+              <div className="mt-3 space-y-1.5">
+                {activeChannels
+                  .sort((a, b) => (streaks[b.id] || 0) - (streaks[a.id] || 0))
+                  .map((ch) => (
+                  <a
+                    key={ch.id}
+                    href={`https://www.youtube.com/channel/${ch.id}?sub_confirmation=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: ch.color }}
+                    />
+                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors truncate">
+                      {ch.name}
+                    </span>
+                    {streaks[ch.id] > 0 && (
+                      <span className="text-xs text-orange-400 ml-auto shrink-0">🔥{streaks[ch.id]}</span>
+                    )}
+                    <span className="text-gray-600 group-hover:text-red-400 transition-colors text-xs ml-auto shrink-0">
+                      登録 ➜
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
           {activeChannelFilter && (
             <div className="flex justify-center mt-2">
               <button
