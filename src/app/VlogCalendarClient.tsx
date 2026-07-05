@@ -229,7 +229,13 @@ function DayCell({
         )}
       </div>
       <div className="space-y-2">
-        {videos.map((v) => (
+        {videos
+          .sort((a, b) => {
+            const aIdx = channels.findIndex((c) => c.id === a.channelId);
+            const bIdx = channels.findIndex((c) => c.id === b.channelId);
+            return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+          })
+          .map((v) => (
           <VideoCard
             key={v.videoId}
             video={v}
@@ -774,7 +780,8 @@ export default function VlogCalendarClient({
 
   // Active month data for calendar rendering
   const activeDays = activeMonth === "june" ? juneDays : julyDays;
-  const activeChannels = activeMonth === "june" ? channels : channelsJuly;
+  const activeChannels = (activeMonth === "june" ? channels : channelsJuly)
+    .sort((a, b) => (streaks[b.id] || 0) - (streaks[a.id] || 0));
   const [julyUnlocked, setJulyUnlocked] = useState(true);
   // Remember last active ranking tab across view mode switches
   const [lastRankingTab, setLastRankingTab] = useState<RankingTab>(initialRankingTab);
