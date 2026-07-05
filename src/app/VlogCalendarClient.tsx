@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
+import VideoModal from "@/components/VideoModal";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -101,12 +102,14 @@ function VideoCard({
   watchedAt,
   onWatch,
   channels,
+  onPlay,
 }: {
   video: YouTubeVideo;
   watched: boolean;
   watchedAt: string | null;
   onWatch: (id: string) => void;
   channels: Channel[];
+  onPlay?: (videoId: string) => void;
 }) {
   const color = getChannelColor(video.channelId, channels);
 
@@ -116,12 +119,9 @@ function VideoCard({
     : null;
 
   return (
-    <a
-      href={`https://youtube.com/watch?v=${video.videoId}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={() => onWatch(video.videoId)}
-      className={`group block rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-black/20 ${
+    <button
+      onClick={() => { if (onPlay) { onPlay(video.videoId); onWatch(video.videoId); } else { window.open(`https://youtube.com/watch?v=${video.videoId}`, "_blank"); } }}
+      className={`group block rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-black/20 text-left w-full ${
         watched
           ? "bg-gray-900/80 border-green-800/50 opacity-70"
           : "bg-gray-800/50 border-gray-700/50 hover:border-gray-500/50"
