@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body: { channelId?: string } = await request.json();
+    const body: { channelId?: string; month?: string } = await request.json();
     const channelId = body.channelId?.trim();
     if (!channelId) {
       return NextResponse.json(
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { votes, error, status } = await toggleVote(session.did, channelId);
+    const { votes, error, status } = await toggleVote(session.did, channelId, body.month || "2026-07");
     if (error) {
       return NextResponse.json({ error, votes }, { status: status ?? 500 });
     }

@@ -13,6 +13,7 @@ import { Redis } from "@upstash/redis";
 export interface DidProfile {
   handle: string;       // e.g. "koh.bsky.social"
   displayName: string;  // e.g. "ドリキン"
+  avatar?: string;      // Avatar URL from Bluesky
 }
 
 function getRedis(): Redis | null {
@@ -36,8 +37,8 @@ export async function resolveProfile(did: string): Promise<DidProfile | null> {
   const handle = await resolveHandle(did);
   if (!handle) return null;
 
-  const displayName = await resolveDisplayName(handle);
-  const profile: DidProfile = { handle, displayName: displayName ?? handle };
+  const { displayName, avatar } = await resolveDisplayName(handle);
+  const profile: DidProfile = { handle, displayName: displayName ?? handle, avatar: avatar ?? undefined };
 
   // 3. Cache in Redis (best-effort)
   await setCached(did, profile);
@@ -94,17 +95,20 @@ async function resolveHandle(did: string): Promise<string | null> {
   }
 }
 
-async function resolveDisplayName(handle: string): Promise<string | null> {
+async function resolveDisplayName(handle: string): Promise<{ displayName: string | null; avatar: string | null }> {
   try {
     const res = await fetch(
       `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(handle)}`,
       { signal: AbortSignal.timeout(5000) }
     );
-    if (!res.ok) return null;
+    if (!res.ok) return { displayName: null, avatar: null };
 
-    const data = (await res.json()) as { displayName?: string };
-    return data.displayName ?? null;
+    const data = (await res.json()) as { displayName?: string; avatar?: string };
+    return {
+      displayName: data.displayName ?? null,
+      avatar: data.avatar ?? null,
+    };
   } catch {
-    return null;
+    return { displayName: null, avatar: null };
   }
 }

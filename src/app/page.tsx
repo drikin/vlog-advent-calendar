@@ -4,6 +4,7 @@ import VlogCalendarClient from "./VlogCalendarClient";
 import { getSession } from "@/lib/auth/session";
 import { resolveProfile } from "@/lib/auth/did-resolver";
 import { getAllVotes } from "@/lib/vote";
+import { getStreaks } from "@/lib/streak-cache";
 
 // Dynamic rendering so cookie-based auth works on every request
 export const dynamic = "force-dynamic";
@@ -18,16 +19,12 @@ export default async function Home() {
   const juneChannels = await getMembers("2026-06");
   const julyChannels = await getMembers("2026-07");
 
-  // All unique channels across both months
-  const allChannels = [...juneChannels, ...julyChannels].filter(
-    (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
-  );
-
   try {
-    // Fetch videos for all unique channels across both months
-    const videos = await fetchAllVideos(allChannels);
-    juneDays = groupByDate(videos, "2026-06");
-    julyDays = groupByDate(videos, "2026-07");
+    // Fetch videos separately per month so only that month's members appear
+    const juneVideos = await fetchAllVideos(juneChannels);
+    const julyVideos = await fetchAllVideos(julyChannels);
+    juneDays = groupByDate(juneVideos, "2026-06");
+    julyDays = groupByDate(julyVideos, "2026-07");
   } catch (e) {
     error = String(e);
   }
@@ -36,6 +33,7 @@ export default async function Home() {
   let userDid: string | null = null;
   let userHandle: string | null = null;
   let userDisplayName: string | null = null;
+  let userAvatar: string | null = null;
   try {
     const session = await getSession();
     if (session) {
@@ -44,18 +42,30 @@ export default async function Home() {
       if (profile) {
         userHandle = profile.handle;
         userDisplayName = profile.displayName;
+        userAvatar = profile.avatar ?? null;
       }
     }
   } catch {
     // Not authenticated — fine
   }
 
-  // Fetch votes
+  // Fetch votes for July channels
   let votes: Record<string, string[]> = {};
   try {
-    votes = await getAllVotes(allChannels);
+    votes = await getAllVotes(julyChannels, "2026-07");
   } catch {
     // ignore
+  }
+
+  // Fetch streak data (cached in Redis, refreshes every 6h)
+  let streaks: Record<string, number> = {};
+  try {
+    const allUniqueChannels = [...juneChannels, ...julyChannels].filter(
+      (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
+    );
+    streaks = await getStreaks(allUniqueChannels);
+  } catch {
+    // non-fatal
   }
 
   return (
@@ -69,7 +79,9 @@ export default async function Home() {
       userDid={userDid}
       userHandle={userHandle}
       userDisplayName={userDisplayName}
+      userAvatar={userAvatar}
       votes={votes}
+      streaks={streaks}
     />
   );
 }

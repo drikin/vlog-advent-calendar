@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
@@ -75,26 +75,6 @@ async function migrateLocalToApi(): Promise<WatchedMap | null> {
     return null;
   }
 }
-
-/* ─── RSVP types ─── */
-
-type RsvpStatus = "confirmed" | "maybe" | "interested";
-
-interface RsvpEntry {
-  name: string;
-  did: string;
-  status: RsvpStatus;
-  comment: string;
-  createdAt: string;
-}
-
-const STATUS_LABELS: Record<RsvpStatus, string> = {
-  confirmed: "✅ 確定",
-  maybe: "🔄 参加予定（調整中）",
-  interested: "🤔 参加希望",
-};
-
-const STATUS_ORDER: RsvpStatus[] = ["confirmed", "maybe", "interested"];
 
 /* ─── Helpers ─── */
 
@@ -266,7 +246,7 @@ function DayCell({
 
 /* ─── Login / Logout ─── */
 
-function LoginForm() {
+function LoginForm({ compact }: { compact?: boolean }) {
   const [handle, setHandle] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -291,6 +271,30 @@ function LoginForm() {
       setError(err instanceof Error ? err.message : "Login failed");
       setLoading(false);
     }
+  }
+
+  if (compact) {
+    return (
+      <form onSubmit={handleSubmit} className="flex items-center gap-1.5">
+        <span className="text-blue-400 text-xs">🦋</span>
+        <input
+          type="text"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          placeholder="handle"
+          className="bg-gray-900/60 border border-gray-700 rounded px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 w-24"
+          disabled={loading}
+        />
+        <button
+          type="submit"
+          disabled={loading || !handle}
+          className="bg-blue-600 hover:bg-blue-500 text-white rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+        >
+          {loading ? "..." : "Bluesky ログイン"}
+        </button>
+        {error && <span className="text-red-400 text-[10px]">{error}</span>}
+      </form>
+    );
   }
 
   return (
@@ -335,278 +339,16 @@ function LogoutButton() {
   );
 }
 
-/* ─── RSVP Manager ─── */
-
-function RsvpManager({
-  userDid,
-  userHandle,
-  userDisplayName,
-}: {
-  userDid: string | null;
-  userHandle: string | null;
-  userDisplayName: string | null;
-}) {
-  const [entries, setEntries] = useState<RsvpEntry[]>([]);
-  const [comment, setComment] = useState("");
-  const [status, setStatus] = useState<RsvpStatus>("confirmed");
-  const [loading, setLoading] = useState(true);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [details, setDetails] = useState<Record<string, string> | null>(null);
-  const [detailsError, setDetailsError] = useState<string | null>(null);
-
-  // Load from API on mount
-  useEffect(() => {
-    fetch("/api/rsvp")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.entries) setEntries(data.entries);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Load event details if user is registered
-  const loadDetails = useCallback(async () => {
-    setDetailsError(null);
-    try {
-      const res = await fetch("/api/rsvp/details");
-      if (!res.ok) {
-        const data = await res.json();
-        setDetailsError(data.error || "情報を取得できませんでした");
-        return;
-      }
-      const data = await res.json();
-      if (data.details) setDetails(data.details);
-    } catch {
-      setDetailsError("通信エラー");
-    }
-  }, []);
-
-  // Load event details on mount if user is already registered
-  useEffect(() => {
-    if (userDid) {
-      loadDetails();
-    }
-  }, [userDid, loadDetails]);
-
-  // Pre-fill name from user's existing entry
-  const userEntry = entries.find((e) => e.did === userDid);
-  const isLoggedIn = !!userDid;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isLoggedIn) return;
-
-    const trimmed = (userDisplayName ?? userHandle ?? "").trim();
-    if (!trimmed) return;
-
-    setSubmitError(null);
-
-    try {
-      const res = await fetch("/api/rsvp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed, status, comment: comment.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitError(data.error || "登録に失敗しました");
-        return;
-      }
-      if (data.entries) setEntries(data.entries);
-      // Load event details after successful registration
-      loadDetails();
-    } catch {
-      setSubmitError("通信エラーが発生しました");
-    }
-
-    setComment("");
-    setStatus("confirmed");
-  };
-
-  const handleDelete = async () => {
-    if (!isLoggedIn) return;
-    try {
-      const res = await fetch("/api/rsvp", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (data.entries) setEntries(data.entries);
-      // Hide details after unregistering
-      setDetails(null);
-    } catch {}
-  };
-
-  // Sort: confirmed first, then maybe, then interested
-  const sorted = [...entries].sort(
-    (a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)
-  );
-
-  const counts = {
-    confirmed: entries.filter((e) => e.status === "confirmed").length,
-    maybe: entries.filter((e) => e.status === "maybe").length,
-    interested: entries.filter((e) => e.status === "interested").length,
-    total: entries.length,
-  };
-
-  return (
-    <div className="mt-16 border-t border-gray-800 pt-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl md:text-2xl font-bold">
-            🎓 デスブログ卒業式 オフ会
-          </h2>
-          <p className="text-gray-400 mt-1 text-sm">
-            2026年7月4日（土） — 参加希望の方は登録してください！
-          </p>
-        </div>
-
-        {/* Event details — only visible to registered participants */}
-        {details && (
-          <div className="max-w-lg mx-auto mb-6 bg-gradient-to-br from-amber-950/30 to-orange-950/20 border border-amber-700/40 rounded-lg p-5 text-sm">
-            <p className="text-amber-300 font-bold text-base mb-3">🎉 オフ会詳細</p>
-            <div className="space-y-2 text-gray-300">
-              <p><span className="text-gray-500">📅</span> {details.date} {details.time}</p>
-              <p><span className="text-gray-500">📍</span> {details.venue}</p>
-              <p><span className="text-gray-500">💰</span> {details.price}</p>
-              {details.note && (
-                <p className="text-gray-400 text-xs mt-2">{details.note}</p>
-              )}
-            </div>
-          </div>
-        )}
-        {detailsError && (
-          <p className="text-center text-gray-500 text-xs mb-4">{detailsError}</p>
-        )}
-
-        {/* Status summary */}
-        <div className="flex flex-wrap justify-center gap-3 mb-6 text-sm">
-          <span className="bg-green-900/40 text-green-400 px-3 py-1 rounded-full border border-green-800/50">
-            ✅ 確定: {counts.confirmed}
-          </span>
-          <span className="bg-yellow-900/40 text-yellow-400 px-3 py-1 rounded-full border border-yellow-800/50">
-            🔄 調整中: {counts.maybe}
-          </span>
-          <span className="bg-blue-900/40 text-blue-400 px-3 py-1 rounded-full border border-blue-800/50">
-            🤔 希望: {counts.interested}
-          </span>
-          <span className="bg-gray-800 text-gray-300 px-3 py-1 rounded-full border border-gray-700">
-            計: {counts.total}名
-          </span>
-        </div>
-
-        {/* Form — only shown when logged in */}
-        {isLoggedIn ? (
-          <form onSubmit={handleSubmit} className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-              <input
-                type="text"
-                placeholder="表示名"
-                value={userDisplayName ?? ""}
-                disabled
-                className="bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white/70 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 cursor-not-allowed"
-              />
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as RsvpStatus)}
-                className="bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
-              >
-                <option value="confirmed">✅ 確定</option>
-                <option value="maybe">🔄 参加予定（調整中）</option>
-                <option value="interested">🤔 参加希望</option>
-              </select>
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-              >
-                {userEntry ? "更新する" : "登録する"}
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="一言コメント（任意）"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
-              />
-              {userEntry && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="text-xs text-red-500 hover:text-red-400 transition-colors px-2"
-                >
-                  参加を取り消す
-                </button>
-              )}
-            </div>
-            {submitError && (
-              <p className="mt-2 text-red-400 text-xs">{submitError}</p>
-            )}
-          </form>
-        ) : (
-          <div className="bg-gray-800/20 border border-dashed border-gray-700/50 rounded-lg p-6 mb-6 text-center">
-            <p className="text-gray-500 text-sm mb-3">
-              参加登録するには Bluesky アカウントでログインしてください
-            </p>
-            <LoginForm />
-          </div>
-        )}
-
-        {/* Participant list */}
-        <div className="space-y-2">
-          {loading && (
-            <p className="text-center text-gray-600 text-sm">読み込み中...</p>
-          )}
-          {!loading && sorted.length === 0 && (
-            <p className="text-center text-gray-600 text-sm">まだ参加者は登録されていません</p>
-          )}
-          {sorted.map((entry, idx) => {
-            const isOwner = entry.did === userDid;
-            return (
-              <div
-                key={`${entry.name}-${entry.createdAt}`}
-                className={`rounded-lg px-4 py-3 flex items-start justify-between gap-3 ${
-                  isOwner
-                    ? "bg-blue-900/20 border border-blue-700/40"
-                    : "bg-gray-800/30 border border-gray-700/30"
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm text-white">
-                      {entry.name}
-                      {isOwner && (
-                        <span className="text-blue-400 text-xs ml-1">(あなた)</span>
-                      )}
-                    </span>
-                    <span className="text-xs text-gray-500">{STATUS_LABELS[entry.status]}</span>
-                  </div>
-                  {entry.comment && (
-                    <p className="text-xs text-gray-400">{entry.comment}</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Ranking View ─── */
 
-type RankingTab = "posts" | "popular";
+type RankingTab = "posts" | "popular" | "streak";
 
 function RankingView({
   days,
   watched,
   channels,
   votes,
+  streaks,
   userDid,
   onVote,
   defaultTab = "posts",
@@ -616,6 +358,7 @@ function RankingView({
   watched: WatchedMap;
   channels: Channel[];
   votes: Record<string, string[]>;
+  streaks: Record<string, number>;
   userDid: string | null;
   onVote: (channelId: string) => void;
   defaultTab?: RankingTab;
@@ -689,6 +432,16 @@ function RankingView({
             >
               ❤️ 人気
             </button>
+            <button
+              onClick={() => updateTab("streak")}
+              className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
+                rankingTab === "streak"
+                  ? "bg-orange-800/60 text-orange-200 font-medium"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              🔥 連続日数
+            </button>
           </div>
         </div>
 
@@ -696,6 +449,14 @@ function RankingView({
           <PostsRanking
             channels={byPosts}
             maxTotal={maxTotal}
+            votes={votes}
+            userDid={userDid}
+            onVote={onVote}
+          />
+        ) : rankingTab === "streak" ? (
+          <StreakRanking
+            channels={channels}
+            streaks={streaks}
             votes={votes}
             userDid={userDid}
             onVote={onVote}
@@ -889,26 +650,74 @@ function PopularRanking({
   );
 }
 
-/* ─── CTA Bar ─── */
+/* ─── Streak Ranking ─── */
 
-function CtaBar() {
-  const scrollToRsvp = () => {
-    const el = document.getElementById("rsvp-section");
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
+function StreakRanking({
+  channels,
+  streaks,
+  votes,
+  userDid,
+  onVote,
+}: {
+  channels: Channel[];
+  streaks: Record<string, number>;
+  votes: Record<string, string[]>;
+  userDid: string | null;
+  onVote: (channelId: string) => void;
+}) {
+  // Sort by streak descending, then by total posts as tiebreaker
+  const sorted = [...channels]
+    .map((ch) => ({
+      ...ch,
+      streak: streaks[ch.id] || 0,
+      voteCount: votes[ch.id]?.length || 0,
+    }))
+    .sort((a, b) => {
+      if (b.streak !== a.streak) return b.streak - a.streak;
+      return b.voteCount - a.voteCount;
+    });
+
+  const maxStreak = sorted.length > 0 ? sorted[0].streak : 1;
 
   return (
-    <div className="border-b border-amber-900/40 bg-gradient-to-r from-amber-950/30 via-yellow-950/20 to-amber-950/30">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-3">
-        <span className="text-sm text-amber-300/90">
-          🎓 <strong>デスブログ卒業式 オフ会</strong> 参加希望の方はこちら
-        </span>
-        <button
-          onClick={scrollToRsvp}
-          className="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-4 py-1.5 rounded-full transition-colors shadow-lg shadow-amber-900/30"
-        >
-          👇 参加表明する
-        </button>
+    <div>
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-1">🔥 連続投稿日数ランキング</h2>
+      <p className="text-gray-500 text-xs text-center mb-1">何日連続で毎日投稿できているかの記録</p>
+      <p className="text-gray-600 text-[10px] text-center mb-6">🔥数字は2026年以降の連続更新日数（24時間ごとに更新）</p>
+      <div className="space-y-3">
+        {sorted.map((ch, idx) => {
+          const pct = maxStreak > 0 ? (ch.streak / maxStreak) * 100 : 0;
+          const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+          return (
+            <div
+              key={ch.name}
+              className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{medal}</span>
+                  <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-orange-400 font-bold">
+                    🔥 {ch.streak}日連続
+                  </span>
+                </div>
+              </div>
+              {/* Streak bar */}
+              <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: "#f97316" }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>❤️ {ch.voteCount}</span>
+                <span>目標: 365日</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -926,7 +735,9 @@ export default function VlogCalendarClient({
   userDid,
   userHandle,
   userDisplayName,
+  userAvatar,
   votes,
+  streaks,
 }: {
   juneDays: DayVideos[];
   julyDays: DayVideos[];
@@ -937,7 +748,9 @@ export default function VlogCalendarClient({
   userDid: string | null;
   userHandle: string | null;
   userDisplayName: string | null;
+  userAvatar: string | null;
   votes: Record<string, string[]>;
+  streaks: Record<string, number>;
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
@@ -945,14 +758,24 @@ export default function VlogCalendarClient({
   // Read initial state from URL params for deeplinking
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const initialViewMode = tabParam === "posts" || tabParam === "popular" ? "ranking" : "calendar";
-  const initialRankingTab = tabParam === "posts" || tabParam === "popular" ? tabParam : "posts";
+  const initialViewMode = tabParam === "posts" || tabParam === "popular" || tabParam === "streak" ? "ranking" : "calendar";
+  const initialRankingTab = tabParam === "posts" || tabParam === "popular" || tabParam === "streak" ? tabParam : "posts";
 
   const [viewMode, setViewMode] = useState<"calendar" | "ranking">(initialViewMode);
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
-  const [activeMonth, setActiveMonth] = useState<"june" | "july">("june");
-  const [julyUnlocked, setJulyUnlocked] = useState(false);
+  const [activeMonth, setActiveMonth] = useState<"june" | "july">("july");
+
+  // Streaks are pre-computed server-side and cached in Redis
+  const allChannels = useMemo(
+    () => [...channels, ...channelsJuly].filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i),
+    [channels, channelsJuly]
+  );
+
+  // Active month data for calendar rendering
+  const activeDays = activeMonth === "june" ? juneDays : julyDays;
+  const activeChannels = activeMonth === "june" ? channels : channelsJuly;
+  const [julyUnlocked, setJulyUnlocked] = useState(true);
   // Remember last active ranking tab across view mode switches
   const [lastRankingTab, setLastRankingTab] = useState<RankingTab>(initialRankingTab);
 
@@ -1019,7 +842,7 @@ export default function VlogCalendarClient({
       const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId }),
+        body: JSON.stringify({ channelId, month: activeMonth === "june" ? "2026-06" : "2026-07" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1073,10 +896,8 @@ export default function VlogCalendarClient({
   }
 
   // Build a map of date->videos for the active month
-  const activeDays = activeMonth === "june" ? juneDays : julyDays;
-  const activeChannels = activeMonth === "june" ? channels : channelsJuly;
   const monthPrefix = activeMonth === "june" ? "2026-06" : "2026-07";
-  const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07 🆕";
+  const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07";
   const daysInMonth = activeMonth === "june" ? 30 : 31;
 
   const videoMap = new Map(activeDays.map((d) => [d.date, d.videos]));
@@ -1095,15 +916,44 @@ export default function VlogCalendarClient({
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <CtaBar />
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-center">
-            📹 BSM地獄のVLOG強化月間
-            <span className="text-gray-400 font-normal ml-2">{monthLabel}</span>
-          </h1>
+          {/* Title row with login widget */}
+          <div className="relative flex items-center justify-center">
+            <h1 className="text-2xl md:text-3xl font-bold text-center">
+              📹 デスブロカレンダー
+              <span className="text-gray-400 font-normal ml-2">{monthLabel}</span>
+            </h1>
+            {/* Login widget — top-right */}
+            <div className="absolute right-0 top-0 shrink-0 text-right">
+              {userDid ? (
+                <div className="flex items-center gap-2">
+                  {userAvatar ? (
+                    <img
+                      src={userAvatar}
+                      alt=""
+                      className="w-6 h-6 rounded-full ring-1 ring-blue-500/30"
+                    />
+                  ) : (
+                    <span className="text-blue-400 text-sm">🦋</span>
+                  )}
+                  <span className="text-xs text-gray-300 truncate max-w-[100px]">
+                    {userDisplayName || userHandle}
+                  </span>
+                  <LogoutButton />
+                </div>
+              ) : (
+                <div className="flex flex-col items-end gap-1">
+                  <LoginForm compact />
+                  <p className="text-[10px] text-gray-600 leading-tight">
+                    ログインすると既読管理ができたりして便利ですよ
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
           <p className="text-center text-gray-400 mt-2 text-sm">
-            参加メンバーの毎日のVLOGをチェック！脱落したらドリキン賞です(爆)
+            1ヶ月毎日Vlogを投稿できるかチャレンジしているメンバーのアドベントカレンダーです。
           </p>
           <p className="text-center text-gray-500 mt-1 text-xs">
             参加希望メンバーはドリキンに連絡ください
@@ -1126,7 +976,7 @@ export default function VlogCalendarClient({
               </div>
             </div>
           )}
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
+          <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 mt-4">
             {activeChannels.map((ch) => {
               const isActive = activeChannelFilter === ch.id;
               return (
@@ -1141,10 +991,18 @@ export default function VlogCalendarClient({
                   style={!isActive ? { borderColor: ch.color + "40", color: ch.color } : {}}
                 >
                   {ch.name}
+                  {streaks[ch.id] > 0 && (
+                    <span className="ml-1" title="2026年以降の連続更新日数">🔥{streaks[ch.id]}</span>
+                  )}
                 </button>
               );
             })}
           </div>
+          {activeChannels.some((ch) => streaks[ch.id] > 0) && (
+            <p className="text-center text-gray-600 text-[10px] mt-2">
+              🔥数字は2026年以降の連続更新日数（24時間ごとに更新）
+            </p>
+          )}
           {activeChannelFilter && (
             <div className="flex justify-center mt-2">
               <button
@@ -1177,7 +1035,7 @@ export default function VlogCalendarClient({
                       : "text-gray-500 hover:text-gray-300"
                   }`}
                 >
-                  2026.07 🆕
+                  2026.07
                 </button>
               )}
             </div>
@@ -1221,7 +1079,7 @@ export default function VlogCalendarClient({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={activeDays} watched={watched} channels={activeChannels} votes={voteState} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
+          <RankingView days={activeDays} watched={watched} channels={activeChannels} votes={voteState} streaks={streaks} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
         ) : (
           <>
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
@@ -1257,25 +1115,10 @@ export default function VlogCalendarClient({
           </>
         )}
 
-        {/* RSVP Section — デスブログ卒業式 オフ会 */}
-        <div id="rsvp-section">
-          <RsvpManager userDid={userDid} userHandle={userHandle} userDisplayName={userDisplayName} />
-        </div>
       </main>
 
       <footer className="border-t border-gray-800 py-4 text-center text-gray-600 text-xs">
-        <span
-          onClick={() => setJulyUnlocked(true)}
-          className="cursor-default select-none"
-          title="🎉"
-        >
-          Made with ❤️ for BSM地獄のVLOG強化月間 2026.06
-        </span>
-        {julyUnlocked && (
-          <p className="text-amber-600/50 mt-1 text-[10px]">
-            🔓 7月カレンダー解放済み
-          </p>
-        )}
+        Made with ❤️ for デスブロカレンダー 2026
       </footer>
     </div>
   );

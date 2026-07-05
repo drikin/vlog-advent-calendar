@@ -34,6 +34,92 @@ async function fetchChannelVideos(channelId: string): Promise<any[]> {
 }
 
 /**
+ * Fetch channel videos with pagination for streak calculation.
+ * Keeps fetching pages until we've reached back to JST 2026-01-01
+ * or the maximum page limit is reached.
+ */
+async function fetchChannelVideosForStreak(
+  channelId: string,
+  maxPages: number = 10
+): Promise<any[]> {
+  const uploadsPlaylistId = channelId.replace(/^UC/, "UU");
+  // JST 2026-01-01T00:00:00 = UTC 2025-12-31T15:00:00
+  const CUTOFF_MS = new Date("2025-12-31T15:00:00Z").getTime();
+  let allItems: any[] = [];
+  let pageToken: string | undefined;
+
+  for (let page = 0; page < maxPages; page++) {
+    const params = new URLSearchParams({
+      part: "snippet",
+      playlistId: uploadsPlaylistId,
+      maxResults: "50",
+      key: API_KEY,
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const url = `${YT_API_BASE}/playlistItems?${params}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) break;
+
+    const data = await res.json();
+    allItems = allItems.concat(data.items || []);
+    pageToken = data.nextPageToken;
+
+    if (!pageToken) break; // No more pages
+
+    // Stop early if we've reached back to JST 2026-01-01 cutoff
+    const oldestInPage = data.items?.[data.items.length - 1]?.snippet?.publishedAt;
+    if (oldestInPage && new Date(oldestInPage).getTime() < CUTOFF_MS) break;
+  }
+
+  return allItems;
+}
+
+/**
+ * Fetch streak data for all channels — paginated to find streak breaks.
+ * Returns videos grouped by date, suitable for streak calculation.
+ */
+export async function fetchAllStreakData(
+  channels: { id: string; handle: string; name: string }[]
+): Promise<YouTubeVideo[]> {
+  const allVideos: YouTubeVideo[] = [];
+
+  const results = await Promise.allSettled(
+    channels.map(async (ch) => {
+      const items = await fetchChannelVideosForStreak(ch.id);
+      const videos: YouTubeVideo[] = [];
+      for (const item of items) {
+        const videoId = item.snippet?.resourceId?.videoId;
+        if (!videoId) continue;
+        videos.push({
+          videoId,
+          title: item.snippet.title,
+          thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || "",
+          publishedAt: item.snippet.publishedAt,
+          channelId: ch.id,
+          channelName: ch.name,
+          channelHandle: ch.handle,
+        });
+      }
+      return videos;
+    })
+  );
+
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      allVideos.push(...result.value);
+    }
+  }
+
+  // Sort by publishedAt ascending
+  allVideos.sort(
+    (a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+  );
+  return allVideos;
+}
+
+/**
  * Batch-check video IDs to filter out live streams.
  * Returns a Set of videoIds that are NOT live streams.
  * Cost: 1 quota unit per 50 videos.

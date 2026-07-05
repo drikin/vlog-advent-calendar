@@ -24,10 +24,34 @@ export const DEFAULT_CHANNELS: Channel[] = [
   { id: "UChjoF-1FQ1OprvUV-PoqHGQ", handle: "@mickel_xr",        name: "MICKEL",                         color: "#E17055" },
 ];
 
+/**
+ * July 2026 member list — continuation members after the offline meetup.
+ */
+export const JULY_DEFAULT_CHANNELS: Channel[] = [
+  { id: "UCTfta7Ult6yLu7ru-WInOGg", handle: "@koh",              name: "散財小説ドリキン",             color: "#FF6B6B" },
+  { id: "UCIcziIKVG1Y7meKEOXHNlGw", handle: "@eiko3kobe",         name: "EIKO⭐️",                        color: "#FF8A5C" },
+  { id: "UCJTvowm2dDsjw71aEHeHjGg", handle: "@散財ギタリストたなかしげつぐ", name: "散財ギタリストたなかしげつぐ", color: "#FFD93D" },
+  { id: "UCC1iKYB1Y_KOtHZXk7zY1jg", handle: "@kentakov",          name: "きままにいっkov",               color: "#6C5CE7" },
+  { id: "UCtECO9x5EpcH_E2UUN7QqdQ", handle: "@Cohtaro",           name: "こうたろうカメラ日記",          color: "#A8E6CF" },
+  { id: "UChjoF-1FQ1OprvUV-PoqHGQ", handle: "@mickel_xr",        name: "MICKEL",                         color: "#E17055" },
+  { id: "UCeHyXFWymAvAHZiW8sNFSPw", handle: "@watarunishida2nd791", name: "Wataru Nishida 西田航 2nd",    color: "#74B9FF" },
+];
+
 /** Get member list for a given month (format: "2026-06") */
 export async function getMembers(month: string): Promise<Channel[]> {
   const redis = getRedis();
-  if (!redis) return DEFAULT_CHANNELS;
+  const defaults = month === "2026-07" ? JULY_DEFAULT_CHANNELS : DEFAULT_CHANNELS;
+  if (!redis) return defaults;
+
+  // For July 2026, always overwrite with the new member list
+  if (month === "2026-07") {
+    try {
+      await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(JULY_DEFAULT_CHANNELS));
+    } catch {
+      // non-fatal
+    }
+    return JULY_DEFAULT_CHANNELS;
+  }
 
   try {
     const raw = await redis.get(`${KEY_PREFIX}${month}`);
@@ -38,11 +62,11 @@ export async function getMembers(month: string): Promise<Channel[]> {
 
   // Auto-seed: if key doesn't exist, save defaults and return them
   try {
-    await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(DEFAULT_CHANNELS));
+    await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(defaults));
   } catch {
     // non-fatal
   }
-  return DEFAULT_CHANNELS;
+  return defaults;
 }
 
 /** Save member list for a given month */

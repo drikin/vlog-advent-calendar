@@ -19,12 +19,12 @@ function getRedis(): Redis | null {
  * when all votes were stored in a single JSON blob.
  */
 
-export function chKey(channelId: string): string {
-  return `vote:ch:${channelId}`;
+export function chKey(channelId: string, month?: string): string {
+  return month ? `vote:ch:${month}:${channelId}` : `vote:ch:${channelId}`;
 }
 
-export function userKey(did: string): string {
-  return `vote:user:${did}`;
+export function userKey(did: string, month?: string): string {
+  return month ? `vote:user:${month}:${did}` : `vote:user:${did}`;
 }
 
 export const MAX_VOTES = 3;
@@ -72,7 +72,7 @@ async function migrateOldVotes(redis: Redis): Promise<void> {
 /**
  * Read all channel votes in a single pipeline (efficient, atomic reads).
  */
-export async function getAllVotes(channels?: Channel[]): Promise<Record<string, string[]>> {
+export async function getAllVotes(channels?: Channel[], month?: string): Promise<Record<string, string[]>> {
   const redis = getRedis();
   if (!redis) return {};
 
@@ -92,7 +92,7 @@ export async function getAllVotes(channels?: Channel[]): Promise<Record<string, 
 
     const pipeline = redis.pipeline();
     for (const ch of chList) {
-      pipeline.smembers(chKey(ch.id));
+      pipeline.smembers(chKey(ch.id, month));
     }
     const results = await pipeline.exec();
 
@@ -115,7 +115,8 @@ export async function getAllVotes(channels?: Channel[]): Promise<Record<string, 
  */
 export async function toggleVote(
   did: string,
-  channelId: string
+  channelId: string,
+  month?: string
 ): Promise<{ votes: Record<string, string[]>; error?: string; status?: number }> {
   const redis = getRedis();
   if (!redis) {
@@ -124,17 +125,17 @@ export async function toggleVote(
 
   try {
     // Check if already voted (atomic)
-    const alreadyVoted = await redis.sismember(chKey(channelId), did);
+    const alreadyVoted = await redis.sismember(chKey(channelId, month), did);
 
     if (alreadyVoted) {
       // Remove vote — atomic SREM on both keys
-      await redis.srem(chKey(channelId), did);
-      await redis.srem(userKey(did), channelId);
+      await redis.srem(chKey(channelId, month), did);
+      await redis.srem(userKey(did, month), channelId);
     } else {
       // Check total votes for this user (atomic SCARD)
-      const totalVotes = await redis.scard(userKey(did));
+      const totalVotes = await redis.scard(userKey(did, month));
       if (totalVotes >= MAX_VOTES) {
-        const votes = await getAllVotes();
+        const votes = await getAllVotes(undefined, month);
         return {
           votes,
           error: "投票は最大3つまでです",
@@ -142,11 +143,11 @@ export async function toggleVote(
         };
       }
       // Add vote — atomic SADD on both keys
-      await redis.sadd(chKey(channelId), did);
-      await redis.sadd(userKey(did), channelId);
+      await redis.sadd(chKey(channelId, month), did);
+      await redis.sadd(userKey(did, month), channelId);
     }
 
-    const votes = await getAllVotes();
+    const votes = await getAllVotes(undefined, month);
     return { votes };
   } catch (e) {
     return { votes: {}, error: String(e), status: 500 };
