@@ -925,39 +925,39 @@ export default function VlogCalendarClient({
     <div className="min-h-screen bg-gray-950 text-white">
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Title row with login widget */}
-          <div className="relative flex items-center justify-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-center">
+          {/* Title row */}
+          <div className="relative text-center">
+            <h1 className="text-2xl md:text-3xl font-bold">
               📹 デスブロカレンダー
               <span className="text-gray-400 font-normal ml-2">{monthLabel}</span>
             </h1>
-            {/* Login widget — top-right */}
-            <div className="absolute right-0 top-0 shrink-0 text-right">
-              {userDid ? (
-                <div className="flex items-center gap-2">
-                  {userAvatar ? (
-                    <img
-                      src={userAvatar}
-                      alt=""
-                      className="w-6 h-6 rounded-full ring-1 ring-blue-500/30"
-                    />
-                  ) : (
-                    <span className="text-blue-400 text-sm">🦋</span>
-                  )}
-                  <span className="text-xs text-gray-300 truncate max-w-[100px]">
-                    {userDisplayName || userHandle}
-                  </span>
-                  <LogoutButton />
-                </div>
-              ) : (
-                <div className="flex flex-col items-end gap-1">
-                  <LoginForm compact />
-                  <p className="text-[10px] text-gray-600 leading-tight">
-                    ログインすると既読管理ができたりして便利ですよ
-                  </p>
-                </div>
-              )}
-            </div>
+          </div>
+          {/* Login widget — right-aligned on md+, below title on mobile */}
+          <div className="flex justify-end mt-3 md:absolute md:right-0 md:top-0 md:mt-0 shrink-0 text-right">
+            {userDid ? (
+              <div className="flex items-center gap-2">
+                {userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt=""
+                    className="w-6 h-6 rounded-full ring-1 ring-blue-500/30"
+                  />
+                ) : (
+                  <span className="text-blue-400 text-sm">🦋</span>
+                )}
+                <span className="text-xs text-gray-300 truncate max-w-[100px]">
+                  {userDisplayName || userHandle}
+                </span>
+                <LogoutButton />
+              </div>
+            ) : (
+              <div className="flex flex-col items-end gap-1">
+                <LoginForm compact />
+                <p className="text-[10px] text-gray-600 leading-tight">
+                  ログインすると既読管理ができたりして便利ですよ
+                </p>
+              </div>
+            )}
           </div>
           <p className="text-center text-gray-400 mt-2 text-sm">
             1ヶ月毎日Vlogを投稿できるかチャレンジしているメンバーのアドベントカレンダーです。
