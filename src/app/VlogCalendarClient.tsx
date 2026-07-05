@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
+import { getMonthTheme } from "@/lib/month-theme";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -182,12 +183,14 @@ function DayCell({
   watched,
   onWatch,
   channels,
+  theme,
 }: {
   date: string;
   videos: YouTubeVideo[];
   watched: WatchedMap;
   onWatch: (id: string) => void;
   channels: Channel[];
+  theme: import("@/lib/month-theme").MonthTheme;
 }) {
   const day = parseInt(date.split("-")[2], 10);
   const dayOfWeek = getDayOfWeek(date);
@@ -197,7 +200,7 @@ function DayCell({
 
   if (isEmpty) {
     return (
-      <div className="bg-gray-800/20 rounded-lg border border-gray-800/30 p-2 min-h-[160px] flex flex-col">
+      <div className="rounded-lg border p-2 min-h-[160px] flex flex-col" style={{ backgroundColor: `${theme.bgBase}40`, borderColor: `${theme.cellBorder}` }}>
         <div className="text-center mb-2">
           <span className="text-sm font-bold text-gray-500">{day}</span>
           <span className="text-xs text-gray-600 ml-1">({dayOfWeek})</span>
@@ -213,9 +216,13 @@ function DayCell({
     <div
       className={`rounded-lg border p-2 min-h-[160px] transition-colors ${
         allWatched
-          ? "bg-green-950/30 border-green-800/40"
-          : "bg-gray-800/40 border-gray-700/30"
+          ? "border-green-800/40"
+          : ""
       }`}
+      style={{
+        backgroundColor: allWatched ? "rgba(0,80,30,0.15)" : `${theme.bgBase}60`,
+        borderColor: allWatched ? undefined : theme.cellBorder,
+      }}
     >
       <div className="text-center mb-2 flex items-center justify-center gap-1">
         <span className={`text-sm font-bold ${allWatched ? "text-green-400" : "text-gray-300"}`}>
@@ -907,6 +914,7 @@ export default function VlogCalendarClient({
   const monthPrefix = activeMonth === "june" ? "2026-06" : "2026-07";
   const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07";
   const daysInMonth = activeMonth === "june" ? 30 : 31;
+  const theme = useMemo(() => getMonthTheme(activeMonth), [activeMonth]);
 
   const videoMap = new Map(activeDays.map((d) => [d.date, d.videos]));
   const monthDates = Array.from({ length: daysInMonth }, (_, i) => {
@@ -923,8 +931,14 @@ export default function VlogCalendarClient({
   const unwatchedCount = totalVideos - watchedCount;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <header className="border-b border-gray-800">
+    <div
+      className="min-h-screen text-white transition-colors duration-700"
+      style={{
+        backgroundColor: theme.bgBase,
+        backgroundImage: `linear-gradient(to bottom, ${theme.bgGradFrom}, ${theme.bgGradTo}), ${theme.bgPattern}`,
+      }}
+    >
+      <header className="border-b transition-colors duration-500" style={{ borderColor: theme.headerBorder }}>
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Title row */}
           <div className="relative text-center">
@@ -1137,7 +1151,7 @@ export default function VlogCalendarClient({
               filtered = filtered.filter((v) => v.channelId === activeChannelFilter);
             }
             return (
-              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} />
+              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} theme={theme} />
             );
           })}
         </div>
@@ -1155,7 +1169,7 @@ export default function VlogCalendarClient({
             })
             .filter((d) => d.videos.length > 0)
             .map(({ date, videos }) => (
-              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} />
+              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} theme={theme} />
             ))}
         </div>
           </>
