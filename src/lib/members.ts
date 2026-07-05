@@ -37,6 +37,7 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
   { id: "UCeHyXFWymAvAHZiW8sNFSPw", handle: "@watarunishida2nd791", name: "Wataru Nishida 西田航 2nd",    color: "#74B9FF" },
   { id: "UCIlZWUBUeHX-NGBhf2_9ixw", handle: "@JunOtomo",          name: "湘南Vlogger - Jun Otomo",       color: "#45B7D1" },
   { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731" },
+  { id: "UCImyTdQc9D3sO_fewFo5_qg", handle: "@dmp2205",          name: "だめぽ",                        color: "#FD79A8" },
 ];
 
 /** Get member list for a given month (format: "2026-06") */

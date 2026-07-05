@@ -3,7 +3,7 @@ import { fetchAllStreakData, type YouTubeVideo } from "./youtube";
 import type { Channel } from "@/config/channels";
 import { calculateAllStreaksFromVideos } from "./streak";
 
-const CACHE_KEY = "streak:computed:v13"; // v13: added Jun Otomo to July
+const CACHE_KEY = "streak:computed:v14"; // v14: added だめぽ to July
 const CACHE_TTL = 60 * 60 * 24; // 24 hours
 
 function getRedis(): Redis | null {
