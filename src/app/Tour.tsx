@@ -172,34 +172,35 @@ export default function Tour() {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close(false);
+      if (e.key === "Escape") closeDialog();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // save=true のときだけ localStorage に保存（次回非表示）
-  function close(save: boolean) {
-    setOpen(false);
-    if (save && currentStep) {
-      try {
-        localStorage.setItem(STORAGE_PREFIX + currentStep.target, "1");
-      } catch {
-        // ignore
-      }
+  // 現在のステップを、チェック状態に応じて保存（次回非表示フラグ）
+  function saveCurrentStep() {
+    if (!dontShowAgain || !currentStep) return; // チェックなしなら保存しない（毎回表示）
+    try {
+      localStorage.setItem(STORAGE_PREFIX + currentStep.target, "1");
+    } catch {
+      // ignore
     }
   }
 
-  function finish() {
-    // チェックが入ってなければ次回も表示（保存しない）
-    close(!dontShowAgain);
+  // ダイアログを閉じる（保存はしない）
+  function closeDialog() {
+    setOpen(false);
   }
 
   function next() {
+    // 中間ステップでも、そのステップのチェック状態を保存する
+    saveCurrentStep();
     if (step < pending.length - 1) {
       setStep(step + 1);
     } else {
-      finish();
+      // 最後のステップは保存して閉じる
+      closeDialog();
     }
   }
 
@@ -234,7 +235,7 @@ export default function Tour() {
       {/* オーバーレイ（ターゲット以外を暗く） */}
       <div
         className="fixed inset-0 bg-black/60 z-50"
-        onClick={() => close(false)}
+        onClick={() => closeDialog()}
         aria-hidden
       />
       {/* ハイライト枠 */}
@@ -277,7 +278,7 @@ export default function Tour() {
           </label>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => close(false)}
+              onClick={() => closeDialog()}
               className="text-[11px] text-gray-400 hover:text-gray-200 transition-colors"
             >
               スキップ
