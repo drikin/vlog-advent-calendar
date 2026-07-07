@@ -60,12 +60,17 @@ export function defaultMonth(): string {
   return MONTHS[0];
 }
 
-/** 今日の日付（JST, YYYY-MM-DD） */
+/** 今日の日付（JST, YYYY-MM-DD）— Intl でタイムゾーンを明示的に指定 */
 export function todayJstDate(): string {
-  const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const y = jst.getFullYear();
-  const m = String(jst.getMonth() + 1).padStart(2, "0");
-  const d = String(jst.getDate()).padStart(2, "0");
+  const fmt = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = fmt.formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value ?? "2026";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
   return `${y}-${m}-${d}`;
 }
