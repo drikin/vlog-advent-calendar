@@ -11,7 +11,7 @@ export interface TourStep {
   placement?: "top" | "bottom" | "left" | "right";
 }
 
-const STORAGE_KEY = "vlog-tour-done";
+const STORAGE_PREFIX = "vlog-tour-done:";
 
 const STEPS: TourStep[] = [
   {
@@ -24,6 +24,18 @@ const STEPS: TourStep[] = [
     target: "today-updates",
     title: "今日の更新 ✨",
     body: "その日に投稿された最新の動画がここにまとめて表示されます。毎日チェックして見逃しを防ぎましょう。",
+    placement: "bottom",
+  },
+  {
+    target: "watched-bar",
+    title: "視聴済みバー 📺",
+    body: "全体の何本見たかが一眼でわかる進捗バー。動画をクリックすると視聴済みになり、グレーアウトします。ログインすれば端末間で同期されます。",
+    placement: "bottom",
+  },
+  {
+    target: "bluesky-login",
+    title: "Blueskyログイン 🦋",
+    body: "ログインすると視聴済みが端末間で同期されたり、もっと便利な機能が使えるようになります。まだ登録してない人は @drikin まで！",
     placement: "bottom",
   },
   {
@@ -40,6 +52,20 @@ const STEPS: TourStep[] = [
   },
 ];
 
+// ステップごとの完了フラグを読む（記録があればスキップ対象）
+function isStepDone(target: string): boolean {
+  try {
+    return localStorage.getItem(STORAGE_PREFIX + target) === "1";
+  } catch {
+    return false;
+  }
+}
+
+// 記録のないステップだけを抽出（初回表示対象）
+function getPendingSteps(): TourStep[] {
+  return STEPS.filter((s) => !isStepDone(s.target));
+}
+
 interface Coords {
   top: number;
   left: number;
@@ -49,14 +75,17 @@ interface Coords {
 
 export default function Tour() {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState<TourStep[]>([]);
   const [step, setStep] = useState(0);
   const [coords, setCoords] = useState<Coords | null>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  // 初回アクセス判定
+  // 初回アクセス判定（記録のないステップがあれば表示）
   useEffect(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) {
+      const p = getPendingSteps();
+      if (p.length > 0) {
+        setPending(p);
         setOpen(true);
       }
     } catch {
@@ -64,9 +93,11 @@ export default function Tour() {
     }
   }, []);
 
+  const currentStep = pending[step];
+
   // ターゲット要素の位置を計算（fixed基準でそのまま rect を使う）
   const measure = useCallback(() => {
-    const id = STEPS[step]?.target;
+    const id = currentStep?.target;
     if (!id) {
       setCoords(null);
       return;
@@ -83,15 +114,15 @@ export default function Tour() {
       width: rect.width,
       height: rect.height,
     });
-  }, [step]);
+  }, [currentStep]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || !currentStep) return;
     // 1. 現在の座標を計測
     measure();
     // 2. ターゲットを画面中央にスクロール（即時）
-    const id = STEPS[step]?.target;
-    const el = id ? document.querySelector(`[data-tour="${id}"]`) : null;
+    const id = currentStep.target;
+    const el = document.querySelector(`[data-tour="${id}"]`);
     if (el) el.scrollIntoView({ block: "center", behavior: "auto" });
     // 3. スクロール後に複数回再計測（rAF×2 + scrollend）
     const raf1 = requestAnimationFrame(() => {
@@ -107,7 +138,7 @@ export default function Tour() {
       };
     });
     return () => cancelAnimationFrame(raf1);
-  }, [open, step, measure]);
+  }, [open, step, currentStep, measure]);
 
   // リサイズ時も再計測
   useEffect(() => {
@@ -130,9 +161,9 @@ export default function Tour() {
   // save=true のときだけ localStorage に保存（次回非表示）
   function close(save: boolean) {
     setOpen(false);
-    if (save) {
+    if (save && currentStep) {
       try {
-        localStorage.setItem(STORAGE_KEY, "1");
+        localStorage.setItem(STORAGE_PREFIX + currentStep.target, "1");
       } catch {
         // ignore
       }
@@ -145,21 +176,21 @@ export default function Tour() {
   }
 
   function next() {
-    if (step < STEPS.length - 1) {
+    if (step < pending.length - 1) {
       setStep(step + 1);
     } else {
       finish();
     }
   }
 
-  if (!open) return null;
+  if (!open || !currentStep) return null;
 
   // 吹き出し位置（fixed基準、rect をそのまま使う）
   const bubbleStyle: React.CSSProperties = coords
     ? {
         position: "fixed",
         top:
-          (STEPS[step].placement ?? "bottom") === "bottom"
+          (currentStep.placement ?? "bottom") === "bottom"
             ? Math.min(coords.top + coords.height + 12, window.innerHeight - 160)
             : Math.max(12, coords.top - 140),
         left: Math.min(
@@ -177,8 +208,6 @@ export default function Tour() {
         width: 320,
         zIndex: 60,
       };
-
-  const current = STEPS[step];
 
   return (
     <>
@@ -209,13 +238,13 @@ export default function Tour() {
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-bold text-purple-200">
-            {current.title}
+            {currentStep.title}
           </span>
           <span className="text-[10px] text-gray-400">
-            {step + 1} / {STEPS.length}
+            {step + 1} / {pending.length}
           </span>
         </div>
-        <p className="text-xs text-gray-200 leading-relaxed">{current.body}</p>
+        <p className="text-xs text-gray-200 leading-relaxed">{currentStep.body}</p>
         <div className="flex items-center justify-between mt-3">
           <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer select-none">
             <input
@@ -237,7 +266,7 @@ export default function Tour() {
               onClick={next}
               className="text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg transition-colors"
             >
-              {step < STEPS.length - 1 ? "次へ →" : "始める 🎉"}
+              {step < pending.length - 1 ? "次へ →" : "始める 🎉"}
             </button>
           </div>
         </div>

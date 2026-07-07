@@ -929,7 +929,10 @@ export default function VlogCalendarClient({
             <span className="block text-gray-400 text-sm md:text-base mt-1">{monthLabelStr}</span>
           </div>
           {/* Login widget — right-aligned on md+, below title on mobile */}
-          <div className="flex justify-end mt-3 md:absolute md:right-0 md:top-0 md:mt-0 shrink-0 text-right">
+          <div
+            data-tour="bluesky-login"
+            className="flex justify-end mt-3 md:absolute md:right-0 md:top-0 md:mt-0 shrink-0 text-right"
+          >
             {userDid ? (
               <div className="flex items-center gap-2">
                 {userAvatar ? (
@@ -962,7 +965,7 @@ export default function VlogCalendarClient({
             参加希望メンバーはドリキンに連絡ください
           </p>
           {totalVideos > 0 && (
-            <div className="max-w-sm mx-auto mt-4">
+            <div className="max-w-sm mx-auto mt-4" data-tour="watched-bar">
               <div className="flex justify-between text-xs text-gray-500 mb-1">
                 <span>{showUnwatchedOnly ? "未視聴" : "視聴済み"}</span>
                 <span className="text-green-400 font-medium">
