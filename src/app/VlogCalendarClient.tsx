@@ -710,6 +710,17 @@ export default function VlogCalendarClient({
   const [voteState, setVoteState] = useState<Record<string, string[]>>(initialVotes);
   const [stampState, setStampState] = useState<Record<string, Record<string, number>>>(initialStamps);
   const [activeMonth, setActiveMonth] = useState<string>(initialMonth);
+  const [visitCount, setVisitCount] = useState<number | null>(null);
+
+  // トップページ累計アクセス数を取得（ヘッダー表示用）
+  useEffect(() => {
+    fetch("/api/visits")
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.count === "number") setVisitCount(d.count);
+      })
+      .catch(() => {});
+  }, []);
 
   // Streaks are pre-computed server-side and cached in Redis
   const allChannels = Object.values(channelsByMonth)
@@ -956,6 +967,11 @@ export default function VlogCalendarClient({
               </div>
             )}
           </div>
+          {visitCount !== null && (
+            <p className="text-right md:absolute md:right-0 md:top-12 md:mt-0 mt-1 text-[10px] text-gray-600">
+              👀 累計 {visitCount.toLocaleString()} 回表示
+            </p>
+          )}
           <p className="text-center text-gray-400 mt-2 text-sm">
             1ヶ月毎日Vlogを投稿できるかチャレンジしているメンバーのアドベントカレンダーです。
           </p>
