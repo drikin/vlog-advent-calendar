@@ -887,7 +887,6 @@ export default function VlogCalendarClient({
 
   // Build a map of date->videos for the active month
   const monthPrefix = activeMonth;
-  const monthLabelStr = monthLabel(activeMonth);
   const daysInMonthNum = daysInMonth(activeMonth);
   const videoMap = new Map(activeDays.map((d) => [d.date, d.videos]));
   const monthDates = Array.from({ length: daysInMonthNum }, (_, i) => {
@@ -926,7 +925,6 @@ export default function VlogCalendarClient({
               alt="デスブロカレンダー"
               className="w-full max-w-[500px] mx-auto object-contain"
             />
-            <span className="block text-gray-400 text-sm md:text-base mt-1">{monthLabelStr}</span>
           </div>
           {/* Login widget — right-aligned on md+, below title on mobile */}
           <div
