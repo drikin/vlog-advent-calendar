@@ -1202,6 +1202,7 @@ export default function VlogCalendarClient({
                     href={`https://www.youtube.com/watch?v=${v.videoId}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => handleWatch(v.videoId)}
                     className="group relative rounded-xl overflow-hidden border border-orange-500/30 bg-black/40 hover:border-orange-400/60 transition-all"
                   >
                     <div className="aspect-video bg-gray-900 relative">
