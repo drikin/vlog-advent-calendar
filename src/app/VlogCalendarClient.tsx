@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
 import { MONTHS, monthLabel, monthKey, daysInMonth, todayJstDate } from "@/lib/months";
+import Tour from "./Tour";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -915,6 +916,7 @@ export default function VlogCalendarClient({
     <div
       className={`min-h-screen text-white ${themeClass}`}
     >
+      <Tour />
       <header className="border-b theme-header-border">
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Title row */}
@@ -1022,11 +1024,12 @@ export default function VlogCalendarClient({
                   )}
                   {/* Stamp buttons */}
                   <div className="flex justify-center gap-1">
-                    {["👍", "🔥", "🎉", "❤️"].map((emoji) => {
+                    {["👍", "🔥", "🎉", "❤️"].map((emoji, si) => {
                       const count = stampState[ch.id]?.[emoji] || 0;
                       return (
                         <button
                           key={emoji}
+                          data-tour={si === 0 && emoji === "👍" ? "stamp-btn" : undefined}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStamp(ch.id, emoji);
@@ -1089,32 +1092,6 @@ export default function VlogCalendarClient({
               </div>
             )}
           </div>
-          {/* Stamp rules explanation */}
-          <div className="max-w-lg mx-auto mt-4 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-700/40 rounded-xl p-4 text-xs text-gray-300 space-y-1.5 shadow-lg shadow-purple-900/10">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">🎯</span>
-              <span className="text-sm font-bold text-purple-300">応援スタンプで盛り上がろう！</span>
-            </div>
-            <p className="flex items-start gap-2">
-              <span className="text-purple-400 mt-0.5">①</span>
-              <span>各メンバーのカードにある <span className="text-base">👍🔥🎉❤️</span> をポチッと応援！</span>
-            </p>
-            <p className="flex items-start gap-2">
-              <span className="text-purple-400 mt-0.5">②</span>
-              <span>もう一度押せば取り消せる <strong className="text-purple-300">トグル式</strong>（気軽に押してね）</span>
-            </p>
-            <p className="flex items-start gap-2">
-              <span className="text-purple-400 mt-0.5">③</span>
-              <span>各スタンプは <strong className="text-purple-300">1日1回</strong> まで（毎日リセット）</span>
-            </p>
-            <p className="flex items-start gap-2">
-              <span className="text-purple-400 mt-0.5">④</span>
-              <span>カウントは <strong className="text-purple-300">月間累計</strong>！ランキングタブでチェック 👉</span>
-            </p>
-            <div className="mt-2 pt-2 border-t border-purple-800/40 text-center">
-              <span className="text-gray-500">ログイン不要！誰でもワンクリックで応援できます 🎉</span>
-            </div>
-          </div>
           {activeChannelFilter && (
             <div className="flex justify-center mt-2">
               <button
@@ -1125,7 +1102,7 @@ export default function VlogCalendarClient({
               </button>
             </div>
           )}
-          <div className="flex justify-center mt-3 gap-2">
+          <div className="flex justify-center mt-3 gap-2" data-tour="month-tabs">
             {/* Month tabs — generated from MONTHS */}
             <div className="flex gap-1 bg-gray-800/50 rounded-full p-0.5 border border-gray-700/50 overflow-x-auto max-w-full">
               {MONTHS.map((m) => {
@@ -1156,6 +1133,7 @@ export default function VlogCalendarClient({
               {showUnwatchedOnly ? "🟢 未視聴のみ表示中" : "⚪ 全動画表示"}
             </button>
             <button
+              data-tour="ranking-btn"
               onClick={() => {
                 const newMode = viewMode === "calendar" ? "ranking" : "calendar";
                 setViewMode(newMode);
@@ -1191,7 +1169,7 @@ export default function VlogCalendarClient({
           <>
           {/* 今日の更新ハイライト */}
           {todayVideos.length > 0 && (
-            <section className="mb-6">
+            <section className="mb-6" data-tour="today-updates">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-lg">✨</span>
                 <h2 className="text-base md:text-lg font-bold text-white">今日の更新</h2>
