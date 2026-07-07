@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 export interface TourStep {
   /** data-tour 属性の値（ターゲット要素を指定） */
@@ -51,7 +51,7 @@ export default function Tour() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [coords, setCoords] = useState<Coords | null>(null);
-  const [placement, setPlacement] = useState<TourStep["placement"]>("bottom");
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // 初回アクセス判定
   useEffect(() => {
@@ -64,46 +64,70 @@ export default function Tour() {
     }
   }, []);
 
-  // ターゲット要素の位置を計算
-  useLayoutEffect(() => {
-    if (!open) return;
+  // ターゲット要素の位置を計算（fixed基準でそのまま rect を使う）
+  const measure = useCallback(() => {
     const id = STEPS[step]?.target;
-    if (!id) return;
+    if (!id) {
+      setCoords(null);
+      return;
+    }
     const el = document.querySelector(`[data-tour="${id}"]`);
     if (!el) {
       setCoords(null);
       return;
     }
     const rect = el.getBoundingClientRect();
-    const c: Coords = {
-      top: rect.top + window.scrollY,
-      left: rect.left + window.scrollX,
+    setCoords({
+      top: rect.top,
+      left: rect.left,
       width: rect.width,
       height: rect.height,
-    };
-    setCoords(c);
-    setPlacement(STEPS[step].placement ?? "bottom");
-    // ターゲットが画面外ならスクロールして見せる
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [open, step]);
+    });
+    // 座標確定後にスクロール（smoothではなく即時でズレ防止）
+    el.scrollIntoView({ block: "center" });
+  }, [step]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    // レイアウト確定後に計測、さらに rAF で再計測（scroll後の補正）
+    measure();
+    const raf = requestAnimationFrame(() => measure());
+    return () => cancelAnimationFrame(raf);
+  }, [open, step, measure]);
+
+  // リサイズ時も再計測
+  useEffect(() => {
+    if (!open) return;
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [open, measure]);
 
   // Esc で閉じる
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") finish();
+      if (e.key === "Escape") close(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  function finish() {
+  // save=true のときだけ localStorage に保存（次回非表示）
+  function close(save: boolean) {
     setOpen(false);
-    try {
-      localStorage.setItem(STORAGE_KEY, "1");
-    } catch {
-      // ignore
+    if (save) {
+      try {
+        localStorage.setItem(STORAGE_KEY, "1");
+      } catch {
+        // ignore
+      }
     }
+  }
+
+  function finish() {
+    // チェックが入ってなければ次回も表示（保存しない）
+    close(!dontShowAgain);
   }
 
   function next() {
@@ -116,14 +140,14 @@ export default function Tour() {
 
   if (!open) return null;
 
-  // 吹き出し位置の計算（ターゲットの下 or 上に配置）
+  // 吹き出し位置（fixed基準、rect をそのまま使う）
   const bubbleStyle: React.CSSProperties = coords
     ? {
-        position: "absolute",
+        position: "fixed",
         top:
-          placement === "bottom"
-            ? coords.top + coords.height + 12
-            : Math.max(12, coords.top - 120),
+          (STEPS[step].placement ?? "bottom") === "bottom"
+            ? Math.min(coords.top + coords.height + 12, window.innerHeight - 160)
+            : Math.max(12, coords.top - 140),
         left: Math.min(
           Math.max(12, coords.left + coords.width / 2 - 160),
           window.innerWidth - 332
@@ -147,7 +171,7 @@ export default function Tour() {
       {/* オーバーレイ（ターゲット以外を暗く） */}
       <div
         className="fixed inset-0 bg-black/60 z-50"
-        onClick={finish}
+        onClick={() => close(false)}
         aria-hidden
       />
       {/* ハイライト枠 */}
@@ -179,18 +203,29 @@ export default function Tour() {
         </div>
         <p className="text-xs text-gray-200 leading-relaxed">{current.body}</p>
         <div className="flex items-center justify-between mt-3">
-          <button
-            onClick={finish}
-            className="text-[11px] text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            スキップ
-          </button>
-          <button
-            onClick={next}
-            className="text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg transition-colors"
-          >
-            {step < STEPS.length - 1 ? "次へ →" : "始める 🎉"}
-          </button>
+          <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="accent-purple-500 w-3.5 h-3.5"
+            />
+            次回から表示しない
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => close(false)}
+              className="text-[11px] text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              スキップ
+            </button>
+            <button
+              onClick={next}
+              className="text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {step < STEPS.length - 1 ? "次へ →" : "始める 🎉"}
+            </button>
+          </div>
         </div>
       </div>
     </>
