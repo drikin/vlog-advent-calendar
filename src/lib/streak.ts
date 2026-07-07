@@ -7,10 +7,17 @@ const STREAK_2026_START = new Date("2026-01-01T00:00:00+09:00").getTime(); // JS
  * Convert UTC publishedAt string to JST date string (YYYY-MM-DD).
  */
 function toJstDate(publishedAt: string): string {
-  const d = new Date(publishedAt);
-  // JST = UTC + 9h
-  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return jst.toISOString().slice(0, 10);
+  const fmt = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = fmt.formatToParts(new Date(publishedAt));
+  const y = parts.find((p) => p.type === "year")?.value ?? "2026";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${d}`;
 }
 
 /**

@@ -197,9 +197,7 @@ function DayCell({
   const allWatched = videos.length > 0 && watchedCount === videos.length;
 
   // Check if this cell is today (JST)
-  const now = new Date();
-  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const todayStr = jstNow.toISOString().slice(0, 10);
+  const todayStr = todayJstDate();
   const isToday = date === todayStr;
 
   if (isEmpty) {
@@ -910,16 +908,6 @@ export default function VlogCalendarClient({
     .filter((d) => d.date === todayStr)
     .flatMap((d) => d.videos)
     .sort((a, b) => (a.channelName || "").localeCompare(b.channelName || ""));
-
-  // [DEBUG] 今日の更新の表示判定を確認（本番で削除予定）
-  console.log("[DEBUG today]", {
-    activeMonth,
-    todayStr,
-    activeDaysLen: activeDays.length,
-    todayMatch: activeDays.filter((d) => d.date === todayStr).length,
-    todayVideosLen: todayVideos.length,
-    sampleDates: activeDays.slice(0, 3).map((d) => d.date),
-  });
 
   const themeClass = `theme-${monthKey(activeMonth)}`;
 
