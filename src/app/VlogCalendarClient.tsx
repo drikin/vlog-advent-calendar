@@ -911,6 +911,16 @@ export default function VlogCalendarClient({
     .flatMap((d) => d.videos)
     .sort((a, b) => (a.channelName || "").localeCompare(b.channelName || ""));
 
+  // [DEBUG] 今日の更新の表示判定を確認（本番で削除予定）
+  console.log("[DEBUG today]", {
+    activeMonth,
+    todayStr,
+    activeDaysLen: activeDays.length,
+    todayMatch: activeDays.filter((d) => d.date === todayStr).length,
+    todayVideosLen: todayVideos.length,
+    sampleDates: activeDays.slice(0, 3).map((d) => d.date),
+  });
+
   const themeClass = `theme-${monthKey(activeMonth)}`;
 
   return (
