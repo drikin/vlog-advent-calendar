@@ -6,28 +6,33 @@ import { resolveProfile } from "@/lib/auth/did-resolver";
 import { getAllVotes } from "@/lib/vote";
 import { getStreaks } from "@/lib/streak-cache";
 import { getAllStamps } from "@/lib/stamps";
+import { MONTHS, defaultMonth } from "@/lib/months";
 
 // Dynamic rendering so cookie-based auth works on every request
 export const dynamic = "force-dynamic";
 
 /** Server Component: fetch YouTube data + auth state at request time */
 export default async function Home() {
-  let juneDays: DayVideos[] = [];
-  let julyDays: DayVideos[] = [];
+  let daysByMonth: Record<string, DayVideos[]> = {};
   let error: string | null = null;
 
-  // Fetch member lists from Redis (fallback to defaults)
-  const juneChannels = await getMembers("2026-06");
-  const julyChannels = await getMembers("2026-07");
+  // Fetch member lists per month from Redis (fallback to defaults)
+  const channelsByMonth: Record<string, Awaited<ReturnType<typeof getMembers>>> = {};
+  for (const m of MONTHS) {
+    channelsByMonth[m] = await getMembers(m);
+  }
+
+  // Unique channel list across all months for video fetching
+  const allUniqueChannels = Object.values(channelsByMonth)
+    .flat()
+    .filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i);
 
   try {
     // Fetch all videos once using the unified channel list
-    const allUniqueChannels = [...juneChannels, ...julyChannels].filter(
-      (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
-    );
     const allVideos = await fetchAllVideos(allUniqueChannels);
-    juneDays = groupByDate(allVideos, "2026-06");
-    julyDays = groupByDate(allVideos, "2026-07");
+    for (const m of MONTHS) {
+      daysByMonth[m] = groupByDate(allVideos, m);
+    }
   } catch (e) {
     error = String(e);
   }
@@ -52,10 +57,14 @@ export default async function Home() {
     // Not authenticated — fine
   }
 
-  // Fetch votes for July channels
+  // Fetch votes + stamps for the default (current) month
+  const activeMonth = defaultMonth();
+  const activeChannels = channelsByMonth[activeMonth] || allUniqueChannels;
+
+  // Fetch votes for active month channels
   let votes: Record<string, string[]> = {};
   try {
-    votes = await getAllVotes(julyChannels, "2026-07");
+    votes = await getAllVotes(activeChannels, activeMonth);
   } catch {
     // ignore
   }
@@ -63,9 +72,6 @@ export default async function Home() {
   // Fetch streak data (cached in Redis, refreshes every 6h)
   let streaks: Record<string, number> = {};
   try {
-    const allUniqueChannels = [...juneChannels, ...julyChannels].filter(
-      (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
-    );
     streaks = await getStreaks(allUniqueChannels);
   } catch {
     // non-fatal
@@ -74,18 +80,16 @@ export default async function Home() {
   // Fetch stamp data (daily, for current month)
   let stamps: Record<string, Record<string, number>> = {};
   try {
-    stamps = await getAllStamps(julyChannels);
+    stamps = await getAllStamps(activeChannels, activeMonth);
   } catch {
     // non-fatal
   }
 
   return (
     <VlogCalendarClient
-      juneDays={juneDays}
-      julyDays={julyDays}
+      daysByMonth={daysByMonth}
+      channelsByMonth={channelsByMonth}
       error={error}
-      channels={juneChannels}
-      channelsJuly={julyChannels}
       updatedAt={new Date().toISOString()}
       userDid={userDid}
       userHandle={userHandle}
@@ -94,6 +98,7 @@ export default async function Home() {
       votes={votes}
       streaks={streaks}
       stamps={stamps}
+      initialMonth={activeMonth}
     />
   );
 }

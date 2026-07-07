@@ -3,8 +3,8 @@ import { toggleStamp, type StampType } from "@/lib/stamps";
 
 export async function POST(request: NextRequest) {
   try {
-    const { channelId, stamp } = await request.json();
-    if (!channelId || !stamp) {
+    const { channelId, stamp, month } = await request.json();
+    if (!channelId || !stamp || !month) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
 
-    const result = await toggleStamp(channelId, ip, stamp as StampType);
+    const result = await toggleStamp(channelId, ip, stamp as StampType, month);
     if (!result) {
       return NextResponse.json({ error: "Stamp service unavailable" }, { status: 503 });
     }

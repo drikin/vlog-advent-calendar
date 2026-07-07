@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import type { Channel } from "@/config/channels";
+import { MONTHS } from "./months";
 
 const KEY_PREFIX = "members:";
 
@@ -40,25 +41,17 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
   { id: "UCImyTdQc9D3sO_fewFo5_qg", handle: "@dmp2205",          name: "だめぽ",                        color: "#FD79A8", avatar: "https://yt3.ggpht.com/ytc/AIdro_kWJbUJ5p8Wy1dLuTEUMzJLWPMOV_evRfXKGZtDeuO6JSt3BWQXRWDU0qpEoOChyboFO9W0=s800-c-k-c0x00ffffff-no-rj" },
 ];
 
-/** Get member list for a given month (format: "2026-06") */
+/** Get member list for a given month (format: "2026-06").
+ *  Redis に保存されたリストを優先し、未設定ならデフォルト（6月リスト）を返す。
+ *  7月以降の特別扱いは廃止 — 全月共通のロジック。 */
 export async function getMembers(month: string): Promise<Channel[]> {
   const redis = getRedis();
-  const defaults = month === "2026-07" ? JULY_DEFAULT_CHANNELS : DEFAULT_CHANNELS;
+  const defaults = DEFAULT_CHANNELS;
   if (!redis) return defaults;
-
-  // For July 2026, always overwrite with the new member list
-  if (month === "2026-07") {
-    try {
-      await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(JULY_DEFAULT_CHANNELS));
-    } catch {
-      // non-fatal
-    }
-    return JULY_DEFAULT_CHANNELS;
-  }
 
   try {
     const raw = await redis.get(`${KEY_PREFIX}${month}`);
-    if (raw && Array.isArray(raw)) return raw as Channel[];
+    if (raw && Array.isArray(raw) && raw.length > 0) return raw as Channel[];
   } catch {
     // fall through
   }
@@ -84,17 +77,21 @@ export async function setMembers(month: string, channels: Channel[]): Promise<vo
 export async function initMembers(month: string, sourceMonth?: string): Promise<Channel[]> {
   const redis = getRedis();
   if (!redis) return DEFAULT_CHANNELS;
-
-  // Check if already exists
   const existing = await redis.get(`${KEY_PREFIX}${month}`);
   if (existing && Array.isArray(existing) && existing.length > 0) {
     return existing as Channel[];
   }
 
-  // Copy from source month or use defaults
+  // Copy from source month or use defaults (first supported month)
   let source: Channel[] = DEFAULT_CHANNELS;
   if (sourceMonth) {
     const src = await redis.get(`${KEY_PREFIX}${sourceMonth}`);
+    if (src && Array.isArray(src) && src.length > 0) {
+      source = src as Channel[];
+    }
+  } else {
+    // Default to the first month's list
+    const src = await redis.get(`${KEY_PREFIX}${MONTHS[0]}`);
     if (src && Array.isArray(src) && src.length > 0) {
       source = src as Channel[];
     }

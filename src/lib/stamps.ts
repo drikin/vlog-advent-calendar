@@ -16,16 +16,17 @@ function todayJst(): string {
   return jst.toISOString().slice(0, 10);
 }
 
-/** Get monthly stamp counts for all channels */
+/** Get monthly stamp counts for all channels for a given month */
 export async function getAllStamps(
-  channels: { id: string }[]
+  channels: { id: string }[],
+  month: string
 ): Promise<Record<string, Record<StampType, number>>> {
   const redis = getRedis();
   if (!redis) return {};
 
   const pipeline = redis.pipeline();
   for (const ch of channels) {
-    pipeline.hgetall(`${STAMP_KEY}:monthly:${ch.id}`);
+    pipeline.hgetall(`${STAMP_KEY}:monthly:${month}:${ch.id}`);
   }
   const results = await pipeline.exec();
 
@@ -49,19 +50,20 @@ export async function getAllStamps(
 export async function toggleStamp(
   channelId: string,
   ip: string,
-  stamp: StampType
+  stamp: StampType,
+  month: string
 ): Promise<{ counts: Record<StampType, number>; action: "added" | "removed" } | null> {
   const redis = getRedis();
   if (!redis) return null;
 
   const today = todayJst();
 
-  // Daily voter tracking: stamps:voters:{date}:{channelId}:{stamp} → Set of IPs
-  const voterKey = `${STAMP_KEY}:voters:${today}:${channelId}:${stamp}`;
+  // Daily voter tracking per month: stamps:voters:{date}:{month}:{channelId}:{stamp} → Set of IPs
+  const voterKey = `${STAMP_KEY}:voters:${today}:${month}:${channelId}:${stamp}`;
   const alreadyStamped = await redis.sismember(voterKey, ip);
 
-  // Monthly cumulative count: stamps:monthly:{channelId} → hash of emoji→count
-  const countKey = `${STAMP_KEY}:monthly:${channelId}`;
+  // Monthly cumulative count: stamps:monthly:{month}:{channelId} → hash of emoji→count
+  const countKey = `${STAMP_KEY}:monthly:${month}:${channelId}`;
 
   if (alreadyStamped) {
     // Remove stamp

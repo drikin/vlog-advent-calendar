@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
+import { MONTHS, monthLabel, monthKey, daysInMonth } from "@/lib/months";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -660,25 +661,22 @@ function StampRanking({
 /* ─── Main Component ─── */
 
 export default function VlogCalendarClient({
-  juneDays,
-  julyDays,
+  daysByMonth,
+  channelsByMonth,
   error,
-  channels,
-  channelsJuly,
   updatedAt,
   userDid,
   userHandle,
   userDisplayName,
   userAvatar,
-  votes,
+  votes: initialVotes,
   streaks,
   stamps: initialStamps,
+  initialMonth,
 }: {
-  juneDays: DayVideos[];
-  julyDays: DayVideos[];
+  daysByMonth: Record<string, DayVideos[]>;
+  channelsByMonth: Record<string, Channel[]>;
   error: string | null;
-  channels: Channel[];
-  channelsJuly: Channel[];
   updatedAt: string;
   userDid: string | null;
   userHandle: string | null;
@@ -687,6 +685,7 @@ export default function VlogCalendarClient({
   votes: Record<string, string[]>;
   streaks: Record<string, number>;
   stamps: Record<string, Record<string, number>>;
+  initialMonth: string;
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
@@ -700,20 +699,19 @@ export default function VlogCalendarClient({
   const [viewMode, setViewMode] = useState<"calendar" | "ranking">(initialViewMode);
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState(false);
-  const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
+  const [voteState, setVoteState] = useState<Record<string, string[]>>(initialVotes);
   const [stampState, setStampState] = useState<Record<string, Record<string, number>>>(initialStamps);
-  const [activeMonth, setActiveMonth] = useState<"june" | "july">("july");
+  const [activeMonth, setActiveMonth] = useState<string>(initialMonth);
 
   // Streaks are pre-computed server-side and cached in Redis
-  const allChannels = [...channels, ...channelsJuly].filter(
-    (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
-  );
+  const allChannels = Object.values(channelsByMonth)
+    .flat()
+    .filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i);
 
   // Active month data for calendar rendering
-  const activeDays = activeMonth === "june" ? juneDays : julyDays;
-  const activeChannels = (activeMonth === "june" ? channels : channelsJuly)
+  const activeDays = daysByMonth[activeMonth] || [];
+  const activeChannels = (channelsByMonth[activeMonth] || [])
     .sort((a, b) => (streaks[b.id] || 0) - (streaks[a.id] || 0));
-  const [julyUnlocked, setJulyUnlocked] = useState(true);
   // Remember last active ranking tab across view mode switches
   const [lastRankingTab, setLastRankingTab] = useState<RankingTab>(initialRankingTab);
 
@@ -772,7 +770,7 @@ export default function VlogCalendarClient({
       const res = await fetch("/api/stamps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId, stamp }),
+        body: JSON.stringify({ channelId, stamp, month: activeMonth }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -826,7 +824,7 @@ export default function VlogCalendarClient({
       const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId, month: activeMonth === "june" ? "2026-06" : "2026-07" }),
+        body: JSON.stringify({ channelId, month: activeMonth }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -880,11 +878,11 @@ export default function VlogCalendarClient({
   }
 
   // Build a map of date->videos for the active month
-  const monthPrefix = activeMonth === "june" ? "2026-06" : "2026-07";
-  const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07";
-  const daysInMonth = activeMonth === "june" ? 30 : 31;
+  const monthPrefix = activeMonth;
+  const monthLabelStr = monthLabel(activeMonth);
+  const daysInMonthNum = daysInMonth(activeMonth);
   const videoMap = new Map(activeDays.map((d) => [d.date, d.videos]));
-  const monthDates = Array.from({ length: daysInMonth }, (_, i) => {
+  const monthDates = Array.from({ length: daysInMonthNum }, (_, i) => {
     const day = i + 1;
     const dateStr = `${monthPrefix}-${String(day).padStart(2, "0")}`;
     return { date: dateStr, videos: videoMap.get(dateStr) || [] };
@@ -897,7 +895,7 @@ export default function VlogCalendarClient({
   );
   const unwatchedCount = totalVideos - watchedCount;
 
-  const themeClass = `theme-${activeMonth}`;
+  const themeClass = `theme-${monthKey(activeMonth)}`;
 
   return (
     <div
@@ -912,7 +910,7 @@ export default function VlogCalendarClient({
               alt="デスブロカレンダー"
               className="w-full max-w-[500px] mx-auto object-contain"
             />
-            <span className="block text-gray-400 text-sm md:text-base mt-1">{monthLabel}</span>
+            <span className="block text-gray-400 text-sm md:text-base mt-1">{monthLabelStr}</span>
           </div>
           {/* Login widget — right-aligned on md+, below title on mobile */}
           <div className="flex justify-end mt-3 md:absolute md:right-0 md:top-0 md:mt-0 shrink-0 text-right">
@@ -1114,30 +1112,24 @@ export default function VlogCalendarClient({
             </div>
           )}
           <div className="flex justify-center mt-3 gap-2">
-            {/* Month tabs */}
-            <div className="flex gap-1 bg-gray-800/50 rounded-full p-0.5 border border-gray-700/50">
-              <button
-                onClick={() => setActiveMonth("june")}
-                className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                  activeMonth === "june"
-                    ? "bg-gray-700 text-white font-medium"
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                2026.06
-              </button>
-              {julyUnlocked && (
-                <button
-                  onClick={() => setActiveMonth("july")}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                    activeMonth === "july"
-                      ? "bg-amber-700 text-amber-100 font-medium"
-                      : "text-gray-500 hover:text-gray-300"
-                  }`}
-                >
-                  2026.07
-                </button>
-              )}
+            {/* Month tabs — generated from MONTHS */}
+            <div className="flex gap-1 bg-gray-800/50 rounded-full p-0.5 border border-gray-700/50 overflow-x-auto max-w-full">
+              {MONTHS.map((m) => {
+                const isActive = activeMonth === m;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setActiveMonth(m)}
+                    className={`text-xs px-3 py-1 rounded-full transition-colors whitespace-nowrap ${
+                      isActive
+                        ? "bg-gray-700 text-white font-medium"
+                        : "text-gray-500 hover:text-gray-300"
+                    }`}
+                  >
+                    {monthLabel(m)}
+                  </button>
+                );
+              })}
             </div>
             <button
               onClick={() => setShowUnwatchedOnly(!showUnwatchedOnly)}
