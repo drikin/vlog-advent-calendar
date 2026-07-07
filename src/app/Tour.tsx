@@ -21,6 +21,12 @@ const STEPS: TourStep[] = [
     placement: "bottom",
   },
   {
+    target: "streak-counter",
+    title: "連続更新カウンター 🔥",
+    body: "各メンバーが「毎日Vlog」を何日連続で投稿できているかの記録。2026年以降の連続更新日数で、24時間ごとに自動更新されます。数字が大きいほど凄い！",
+    placement: "bottom",
+  },
+  {
     target: "today-updates",
     title: "今日の更新 ✨",
     body: "その日に投稿された最新の動画がここにまとめて表示されます。毎日チェックして見逃しを防ぎましょう。",

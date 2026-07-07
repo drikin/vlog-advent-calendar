@@ -1021,7 +1021,10 @@ export default function VlogCalendarClient({
                   </p>
                   {/* Streak */}
                   {streak > 0 && (
-                    <p className="text-[11px] text-orange-400/80 font-medium mb-1.5">🔥 連続{streak}日</p>
+                    <p
+                      data-tour="streak-counter"
+                      className="text-[11px] text-orange-400/80 font-medium mb-1.5"
+                    >🔥 連続{streak}日</p>
                   )}
                   {/* Stamp buttons */}
                   <div className="flex justify-center gap-1">
