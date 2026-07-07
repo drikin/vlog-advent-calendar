@@ -1,10 +1,11 @@
 import { fetchAllVideos, groupByDate, type DayVideos } from "@/lib/youtube";
 import { getMembers } from "@/lib/members";
-import VlogCalendarClient from "./VlogCalendarClient";
+import VlogCalendarClient from "./VlogCalendarClientDynamic";
 import { getSession } from "@/lib/auth/session";
 import { resolveProfile } from "@/lib/auth/did-resolver";
 import { getAllVotes } from "@/lib/vote";
 import { getStreaks } from "@/lib/streak-cache";
+import { getAllStamps } from "@/lib/stamps";
 
 // Dynamic rendering so cookie-based auth works on every request
 export const dynamic = "force-dynamic";
@@ -20,11 +21,13 @@ export default async function Home() {
   const julyChannels = await getMembers("2026-07");
 
   try {
-    // Fetch videos separately per month so only that month's members appear
-    const juneVideos = await fetchAllVideos(juneChannels);
-    const julyVideos = await fetchAllVideos(julyChannels);
-    juneDays = groupByDate(juneVideos, "2026-06");
-    julyDays = groupByDate(julyVideos, "2026-07");
+    // Fetch all videos once using the unified channel list
+    const allUniqueChannels = [...juneChannels, ...julyChannels].filter(
+      (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
+    );
+    const allVideos = await fetchAllVideos(allUniqueChannels);
+    juneDays = groupByDate(allVideos, "2026-06");
+    julyDays = groupByDate(allVideos, "2026-07");
   } catch (e) {
     error = String(e);
   }
@@ -68,6 +71,14 @@ export default async function Home() {
     // non-fatal
   }
 
+  // Fetch stamp data (daily, for current month)
+  let stamps: Record<string, Record<string, number>> = {};
+  try {
+    stamps = await getAllStamps(julyChannels);
+  } catch {
+    // non-fatal
+  }
+
   return (
     <VlogCalendarClient
       juneDays={juneDays}
@@ -82,6 +93,7 @@ export default async function Home() {
       userAvatar={userAvatar}
       votes={votes}
       streaks={streaks}
+      stamps={stamps}
     />
   );
 }

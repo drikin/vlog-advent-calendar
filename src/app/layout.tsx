@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BSM地獄のVLOG強化月間 2026.06",
+  title: "BSM地獄のVLOG強化月間 2026.07",
   description: "毎日更新されるVlogをアドベントカレンダー形式でチェック！",
 };
 

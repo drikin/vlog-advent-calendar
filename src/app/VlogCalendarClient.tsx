@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
-import { getMonthTheme } from "@/lib/month-theme";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -122,7 +121,7 @@ function VideoCard({
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => onWatch(video.videoId)}
-      className={`group block rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-black/20 ${
+      className={`group block rounded-md overflow-hidden border transition-all hover:shadow-lg hover:shadow-black/20 ${
         watched
           ? "bg-gray-900/80 border-green-800/50 opacity-70"
           : "bg-gray-800/50 border-gray-700/50 hover:border-gray-500/50"
@@ -132,9 +131,7 @@ function VideoCard({
         <img
           src={video.thumbnail}
           alt={video.title}
-          className={`w-full h-full object-cover transition-transform duration-300 ${
-            watched ? "" : "group-hover:scale-105"
-          }`}
+          className={`w-full h-full object-cover ${watched ? "" : "group-hover:scale-105"} transition-transform duration-300`}
           loading="lazy"
         />
         {watched && stampLabel && (
@@ -158,16 +155,16 @@ function VideoCard({
           {formatTime(video.publishedAt)}
         </div>
       </div>
-      <div className="p-2.5">
+      <div className="p-2">
         <p
-          className={`text-sm font-medium line-clamp-2 leading-snug mb-1.5 transition-colors ${
+          className={`text-xs font-medium line-clamp-2 leading-snug mb-0.5 min-h-[2rem] transition-colors ${
             watched ? "text-gray-400" : "text-gray-100 group-hover:text-white"
           }`}
         >
           {watched && <span className="text-green-400 mr-1">✓</span>}
           {video.title}
         </p>
-        <p className="text-xs" style={{ color }}>
+        <p className="text-[10px]" style={{ color }}>
           {video.channelName}
         </p>
       </div>
@@ -183,27 +180,38 @@ function DayCell({
   watched,
   onWatch,
   channels,
-  theme,
 }: {
   date: string;
   videos: YouTubeVideo[];
   watched: WatchedMap;
   onWatch: (id: string) => void;
   channels: Channel[];
-  theme: import("@/lib/month-theme").MonthTheme;
 }) {
   const day = parseInt(date.split("-")[2], 10);
   const dayOfWeek = getDayOfWeek(date);
+  const isWeekend = dayOfWeek === "土" || dayOfWeek === "日";
   const isEmpty = videos.length === 0;
   const watchedCount = videos.filter((v) => watched.has(v.videoId)).length;
   const allWatched = videos.length > 0 && watchedCount === videos.length;
 
+  // Check if this cell is today (JST)
+  const now = new Date();
+  const jstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const todayStr = jstNow.toISOString().slice(0, 10);
+  const isToday = date === todayStr;
+
   if (isEmpty) {
     return (
-      <div className="rounded-lg border p-2 min-h-[160px] flex flex-col" style={{ backgroundColor: `${theme.bgBase}40`, borderColor: `${theme.cellBorder}` }}>
-        <div className="text-center mb-2">
-          <span className="text-sm font-bold text-gray-500">{day}</span>
-          <span className="text-xs text-gray-600 ml-1">({dayOfWeek})</span>
+      <div className={`rounded-lg border p-2 min-h-[120px] flex flex-col theme-cell-border theme-cell-bg ${
+        isToday ? "ring-2 ring-amber-400/60 ring-inset" : ""
+      } ${
+        isWeekend ? "bg-white/[0.03]" : ""
+      }`}>
+        <div className="text-center mb-1">
+          <span className={`text-sm font-bold ${isToday ? "text-amber-300" : isWeekend ? "text-red-400/70" : "text-gray-500"}`}>
+            {isToday ? "📌 " : ""}{day}
+          </span>
+          <span className={`text-xs ml-1 ${isWeekend ? "text-red-400/50" : "text-gray-600"}`}>({dayOfWeek})</span>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <span className="text-gray-700 text-xs">—</span>
@@ -214,28 +222,28 @@ function DayCell({
 
   return (
     <div
-      className={`rounded-lg border p-2 min-h-[160px] transition-colors ${
+      className={`rounded-lg border p-2 min-h-[120px] transition-colors theme-cell-border theme-cell-bg ${
         allWatched
-          ? "border-green-800/40"
+          ? "border-green-800/40 bg-green-900/20"
           : ""
+      } ${
+        isToday ? "ring-2 ring-amber-400/60 ring-inset" : ""
+      } ${
+        isWeekend && !allWatched ? "bg-white/[0.03]" : ""
       }`}
-      style={{
-        backgroundColor: allWatched ? "rgba(0,80,30,0.15)" : `${theme.bgBase}60`,
-        borderColor: allWatched ? undefined : theme.cellBorder,
-      }}
     >
-      <div className="text-center mb-2 flex items-center justify-center gap-1">
-        <span className={`text-sm font-bold ${allWatched ? "text-green-400" : "text-gray-300"}`}>
-          {day}
+      <div className="text-center mb-1.5 flex items-center justify-center gap-1">
+        <span className={`text-sm font-bold ${allWatched ? "text-green-400" : isToday ? "text-amber-300" : isWeekend ? "text-red-400/70" : "text-gray-300"}`}>
+          {isToday ? "📌 " : ""}{day}
         </span>
-        <span className="text-xs text-gray-500">({dayOfWeek})</span>
+        <span className={`text-xs ${isWeekend ? "text-red-400/50" : "text-gray-500"}`}>({dayOfWeek})</span>
         {videos.length > 0 && (
-          <span className="text-xs text-gray-600 ml-1">
+          <span className="text-xs text-gray-600 ml-0.5">
             {watchedCount}/{videos.length}
           </span>
         )}
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {videos
           .sort((a, b) => {
             const aIdx = channels.findIndex((c) => c.id === a.channelId);
@@ -354,7 +362,7 @@ function LogoutButton() {
 
 /* ─── Ranking View ─── */
 
-type RankingTab = "posts" | "popular" | "streak";
+type RankingTab = "posts" | "popular" | "streak" | "stamps";
 
 function RankingView({
   days,
@@ -362,6 +370,7 @@ function RankingView({
   channels,
   votes,
   streaks,
+  stamps,
   userDid,
   onVote,
   defaultTab = "posts",
@@ -372,6 +381,7 @@ function RankingView({
   channels: Channel[];
   votes: Record<string, string[]>;
   streaks: Record<string, number>;
+  stamps: Record<string, Record<string, number>>;
   userDid: string | null;
   onVote: (channelId: string) => void;
   defaultTab?: RankingTab;
@@ -410,15 +420,6 @@ function RankingView({
   const byPosts = [...channelList].sort((a, b) => b.total - a.total);
   const maxTotal = byPosts.length > 0 ? byPosts[0].total : 1;
 
-  // Sort by votes
-  const byVotes = [...channelList].sort((a, b) => {
-    const va = votes[a.id]?.length || 0;
-    const vb = votes[b.id]?.length || 0;
-    if (vb !== va) return vb - va;
-    return b.total - a.total; // tiebreaker: posts
-  });
-  const maxVotes = byVotes.length > 0 ? (votes[byVotes[0].id]?.length || 0) : 1;
-
   return (
     <div className="mt-12 border-t border-gray-800 pt-8">
       <div className="max-w-3xl mx-auto">
@@ -436,16 +437,6 @@ function RankingView({
               📊 投稿数
             </button>
             <button
-              onClick={() => updateTab("popular")}
-              className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
-                rankingTab === "popular"
-                  ? "bg-pink-800/60 text-pink-200 font-medium"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              ❤️ 人気
-            </button>
-            <button
               onClick={() => updateTab("streak")}
               className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
                 rankingTab === "streak"
@@ -455,6 +446,16 @@ function RankingView({
             >
               🔥 連続日数
             </button>
+            <button
+              onClick={() => updateTab("stamps")}
+              className={`text-xs px-4 py-1.5 rounded-full transition-colors ${
+                rankingTab === "stamps"
+                  ? "bg-purple-800/60 text-purple-200 font-medium"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              🎯 スタンプ
+            </button>
           </div>
         </div>
 
@@ -462,27 +463,18 @@ function RankingView({
           <PostsRanking
             channels={byPosts}
             maxTotal={maxTotal}
-            votes={votes}
-            userDid={userDid}
-            onVote={onVote}
           />
         ) : rankingTab === "streak" ? (
           <StreakRanking
             channels={channels}
             streaks={streaks}
-            votes={votes}
-            userDid={userDid}
-            onVote={onVote}
           />
-        ) : (
-          <PopularRanking
-            channels={byVotes}
-            maxVotes={maxVotes}
-            votes={votes}
-            userDid={userDid}
-            onVote={onVote}
+        ) : rankingTab === "stamps" ? (
+          <StampRanking
+            channels={channels}
+            stamps={stamps}
           />
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -493,15 +485,9 @@ function RankingView({
 function PostsRanking({
   channels,
   maxTotal,
-  votes,
-  userDid,
-  onVote,
 }: {
   channels: { id: string; name: string; color: string; total: number; watched: number }[];
   maxTotal: number;
-  votes: Record<string, string[]>;
-  userDid: string | null;
-  onVote: (channelId: string) => void;
 }) {
   return (
     <div>
@@ -512,7 +498,6 @@ function PostsRanking({
           const pct = maxTotal > 0 ? (ch.total / maxTotal) * 100 : 0;
           const watchedPct = ch.total > 0 ? (ch.watched / ch.total) * 100 : 0;
           const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
-          const voteCount = votes[ch.id]?.length || 0;
           return (
             <div
               key={ch.name}
@@ -534,126 +519,9 @@ function PostsRanking({
                   style={{ width: `${pct}%`, backgroundColor: ch.color }}
                 />
               </div>
-              {/* Watched + votes */}
+              {/* Watched */}
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>視聴済み: {ch.watched}/{ch.total} ({watchedPct.toFixed(0)}%)</span>
-                <span>❤️ {voteCount}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Popular Ranking ─── */
-
-function PopularRanking({
-  channels,
-  maxVotes,
-  votes,
-  userDid,
-  onVote,
-}: {
-  channels: { id: string; name: string; color: string; total: number; watched: number }[];
-  maxVotes: number;
-  votes: Record<string, string[]>;
-  userDid: string | null;
-  onVote: (channelId: string) => void;
-}) {
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const myTotalVotes = userDid ? Object.values(votes).filter((v) => v.includes(userDid)).length : 0;
-  const remainingVotes = Math.max(0, 3 - myTotalVotes);
-
-  const handleVoteClick = (channelId: string) => {
-    if (!userDid) {
-      setShowLoginPrompt(true);
-      return;
-    }
-    onVote(channelId);
-  };
-
-  return (
-    <div>
-      <h2 className="text-xl md:text-2xl font-bold text-center mb-1">❤️ 人気チャンネルランキング</h2>
-      <p className="text-gray-500 text-xs text-center mb-1">応援❤️が多い順</p>
-
-      {/* Rules card */}
-      <div className="max-w-lg mx-auto mb-6 bg-gray-800/30 border border-gray-700/30 rounded-lg p-4 text-xs text-gray-400 space-y-1.5">
-        <p className="text-gray-300 font-medium mb-1">📋 投票ルール</p>
-        <p>• 各チャンネルの ❤️ ボタンを押して応援しよう！</p>
-        <p>• 1人 <strong className="text-pink-400">最大3チャンネル</strong> まで投票できます</p>
-        <p>• もう一度押すと投票を取り消せます（枠が戻るよ）</p>
-        <p>• 投票するには <strong className="text-blue-400">Bluesky アカウント</strong> でログインが必要です</p>
-      </div>
-
-      {userDid && (
-        <p className="text-gray-500 text-xs text-center mb-4">
-          残り投票枠: <span className="text-pink-400 font-medium">{remainingVotes}</span>/3
-        </p>
-      )}
-      {!userDid && (
-        <p className="text-gray-500 text-xs text-center mb-6">
-          ログインして❤️で応援しよう！
-        </p>
-      )}
-      {/* Login prompt overlay */}
-      {showLoginPrompt && !userDid && (
-        <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg p-6 mb-6 text-center">
-          <p className="text-gray-300 text-sm mb-3">
-            ❤️ で応援するにはログインが必要です
-          </p>
-          <LoginForm />
-          <button
-            onClick={() => setShowLoginPrompt(false)}
-            className="mt-3 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            キャンセル
-          </button>
-        </div>
-      )}
-      <div className="space-y-3">
-        {channels.map((ch, idx) => {
-          const voteCount = votes[ch.id]?.length || 0;
-          const hasVoted = userDid ? (votes[ch.id] || []).includes(userDid) : false;
-          const pct = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
-          const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
-          return (
-            <div
-              key={ch.name}
-              className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{medal}</span>
-                  <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleVoteClick(ch.id)}
-                    className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-all ${
-                      hasVoted
-                        ? "bg-pink-900/40 text-pink-400 border-pink-700/50 shadow-lg shadow-pink-900/20"
-                        : "bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-pink-500/50 hover:text-pink-400"
-                    }`}
-                  >
-                    <span>{hasVoted ? "❤️" : "🤍"}</span>
-                    <span>{voteCount}</span>
-                  </button>
-                  <span className="text-xs text-gray-500">{ch.total} 本</span>
-                </div>
-              </div>
-              {/* Vote bar */}
-              <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden relative">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${pct}%`, backgroundColor: "#f472b6" }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>投稿: {ch.total}本</span>
-                <span>視聴率: {ch.total > 0 ? ((ch.watched / ch.total) * 100).toFixed(0) : 0}%</span>
               </div>
             </div>
           );
@@ -668,27 +536,17 @@ function PopularRanking({
 function StreakRanking({
   channels,
   streaks,
-  votes,
-  userDid,
-  onVote,
 }: {
   channels: Channel[];
   streaks: Record<string, number>;
-  votes: Record<string, string[]>;
-  userDid: string | null;
-  onVote: (channelId: string) => void;
 }) {
-  // Sort by streak descending, then by total posts as tiebreaker
+  // Sort by streak descending
   const sorted = [...channels]
     .map((ch) => ({
       ...ch,
       streak: streaks[ch.id] || 0,
-      voteCount: votes[ch.id]?.length || 0,
     }))
-    .sort((a, b) => {
-      if (b.streak !== a.streak) return b.streak - a.streak;
-      return b.voteCount - a.voteCount;
-    });
+    .sort((a, b) => b.streak - a.streak);
 
   const maxStreak = sorted.length > 0 ? sorted[0].streak : 1;
 
@@ -725,8 +583,71 @@ function StreakRanking({
                 />
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>❤️ {ch.voteCount}</span>
                 <span>目標: 365日</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Stamp Ranking ─── */
+
+function StampRanking({
+  channels,
+  stamps,
+}: {
+  channels: Channel[];
+  stamps: Record<string, Record<string, number>>;
+}) {
+  // Calculate total stamps per channel
+  const withTotals = channels.map((ch) => {
+    const s = stamps[ch.id] || {};
+    const total = (s["👍"] || 0) + (s["🔥"] || 0) + (s["🎉"] || 0) + (s["❤️"] || 0);
+    return { ...ch, total, details: s };
+  }).sort((a, b) => b.total - a.total);
+
+  const maxTotal = withTotals.length > 0 ? withTotals[0].total : 1;
+
+  return (
+    <div>
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-1">🎯 スタンプランキング</h2>
+      <p className="text-gray-500 text-xs text-center mb-1">月間累計の応援スタンプ数</p>
+      <p className="text-gray-600 text-[10px] text-center mb-6">各スタンプは1日1回まで押せます（トグル式）</p>
+      <div className="space-y-3">
+        {withTotals.map((ch, idx) => {
+          const pct = maxTotal > 0 ? (ch.total / maxTotal) * 100 : 0;
+          const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+          return (
+            <div
+              key={ch.name}
+              className="bg-gray-800/40 border border-gray-700/30 rounded-lg px-4 py-3"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{medal}</span>
+                  <span className="font-medium text-sm" style={{ color: ch.color }}>{ch.name}</span>
+                </div>
+                <span className="text-sm text-purple-400 font-bold">
+                  🎯 {ch.total}
+                </span>
+              </div>
+              {/* Stamp breakdown */}
+              <div className="flex gap-2 mb-2 text-xs">
+                {["👍", "🔥", "🎉", "❤️"].map((emoji) => (
+                  <span key={emoji} className="text-gray-500">
+                    {emoji} {ch.details[emoji] || 0}
+                  </span>
+                ))}
+              </div>
+              {/* Bar */}
+              <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: "#a855f7" }}
+                />
               </div>
             </div>
           );
@@ -751,6 +672,7 @@ export default function VlogCalendarClient({
   userAvatar,
   votes,
   streaks,
+  stamps: initialStamps,
 }: {
   juneDays: DayVideos[];
   julyDays: DayVideos[];
@@ -764,6 +686,7 @@ export default function VlogCalendarClient({
   userAvatar: string | null;
   votes: Record<string, string[]>;
   streaks: Record<string, number>;
+  stamps: Record<string, Record<string, number>>;
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
@@ -778,12 +701,12 @@ export default function VlogCalendarClient({
   const [activeChannelFilter, setActiveChannelFilter] = useState<string | null>(null);
   const [subOpen, setSubOpen] = useState(false);
   const [voteState, setVoteState] = useState<Record<string, string[]>>(votes);
+  const [stampState, setStampState] = useState<Record<string, Record<string, number>>>(initialStamps);
   const [activeMonth, setActiveMonth] = useState<"june" | "july">("july");
 
   // Streaks are pre-computed server-side and cached in Redis
-  const allChannels = useMemo(
-    () => [...channels, ...channelsJuly].filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i),
-    [channels, channelsJuly]
+  const allChannels = [...channels, ...channelsJuly].filter(
+    (c, i, arr) => arr.findIndex((x) => x.id === c.id) === i
   );
 
   // Active month data for calendar rendering
@@ -834,6 +757,52 @@ export default function VlogCalendarClient({
       setWatched(loadWatchedLocal());
     })();
   }, [userDid]);
+
+  const handleStamp = useCallback(async (channelId: string, stamp: string) => {
+    // Optimistic toggle
+    setStampState((prev) => {
+      const next = { ...prev };
+      const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+      // We don't know if it's add or remove yet, so optimistically +1
+      ch[stamp] = (ch[stamp] || 0) + 1;
+      next[channelId] = ch;
+      return next;
+    });
+    try {
+      const res = await fetch("/api/stamps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId, stamp }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // Revert on failure
+        setStampState((prev) => {
+          const next = { ...prev };
+          const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+          ch[stamp] = Math.max(0, (ch[stamp] || 0) - 1);
+          next[channelId] = ch;
+          return next;
+        });
+        return;
+      }
+      // Sync with server counts
+      setStampState((prev) => {
+        const next = { ...prev };
+        next[channelId] = data.counts;
+        return next;
+      });
+    } catch {
+      // Revert
+      setStampState((prev) => {
+        const next = { ...prev };
+        const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+        ch[stamp] = Math.max(0, (ch[stamp] || 0) - 1);
+        next[channelId] = ch;
+        return next;
+      });
+    }
+  }, []);
 
   const handleVote = useCallback(async (channelId: string) => {
     if (!userDid) {
@@ -914,8 +883,6 @@ export default function VlogCalendarClient({
   const monthPrefix = activeMonth === "june" ? "2026-06" : "2026-07";
   const monthLabel = activeMonth === "june" ? "2026.06" : "2026.07";
   const daysInMonth = activeMonth === "june" ? 30 : 31;
-  const theme = useMemo(() => getMonthTheme(activeMonth), [activeMonth]);
-
   const videoMap = new Map(activeDays.map((d) => [d.date, d.videos]));
   const monthDates = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
@@ -930,24 +897,22 @@ export default function VlogCalendarClient({
   );
   const unwatchedCount = totalVideos - watchedCount;
 
+  const themeClass = `theme-${activeMonth}`;
+
   return (
     <div
-      className="min-h-screen text-white transition-colors duration-700"
-      style={{
-        backgroundColor: theme.bgBase,
-        backgroundImage: theme.bgPattern
-          ? `linear-gradient(to bottom, ${theme.bgGradFrom}, ${theme.bgGradTo}), ${theme.bgPattern}`
-          : `linear-gradient(to bottom, ${theme.bgGradFrom}, ${theme.bgGradTo})`,
-      }}
+      className={`min-h-screen text-white ${themeClass}`}
     >
-      <header className="border-b transition-colors duration-500" style={{ borderColor: theme.headerBorder }}>
+      <header className="border-b theme-header-border">
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Title row */}
           <div className="relative text-center">
-            <h1 className="text-2xl md:text-3xl font-bold">
-              📹 デスブロカレンダー
-              <span className="text-gray-400 font-normal ml-2">{monthLabel}</span>
-            </h1>
+            <img
+              src="/logo-desubro.png"
+              alt="デスブロカレンダー"
+              className="w-full max-w-[500px] mx-auto object-contain"
+            />
+            <span className="block text-gray-400 text-sm md:text-base mt-1">{monthLabel}</span>
           </div>
           {/* Login widget — right-aligned on md+, below title on mobile */}
           <div className="flex justify-end mt-3 md:absolute md:right-0 md:top-0 md:mt-0 shrink-0 text-right">
@@ -1000,24 +965,71 @@ export default function VlogCalendarClient({
               </div>
             </div>
           )}
-          <div className="flex flex-wrap justify-center gap-x-2 gap-y-1 mt-4">
+          {/* Member cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mt-4">
             {activeChannels.map((ch) => {
               const isActive = activeChannelFilter === ch.id;
+              const streak = streaks[ch.id] || 0;
               return (
                 <button
                   key={ch.id}
                   onClick={() => setActiveChannelFilter(isActive ? null : ch.id)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  className={`group relative rounded-xl border p-3 text-center transition-all ${
                     isActive
-                      ? "bg-white/10 border-white/30 text-white font-medium shadow-lg"
-                      : "border-gray-700 hover:border-gray-500"
+                      ? "bg-white/10 border-white/30 shadow-lg shadow-white/5 ring-1 ring-white/20"
+                      : "bg-black/30 border-gray-800 hover:border-gray-600 hover:bg-black/40"
                   }`}
-                  style={!isActive ? { borderColor: ch.color + "40", color: ch.color } : {}}
                 >
-                  {ch.name}
-                  {streaks[ch.id] > 0 && (
-                    <span className="ml-1" title="2026年以降の連続更新日数">🔥{streaks[ch.id]}</span>
+                  {/* Avatar */}
+                  <div className="mx-auto mb-2 w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-white/20 transition-all">
+                    {ch.avatar ? (
+                      <img
+                        src={ch.avatar}
+                        alt={ch.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center text-lg font-bold"
+                        style={{ backgroundColor: ch.color + "40" }}
+                      >
+                        {ch.name[0]}
+                      </div>
+                    )}
+                  </div>
+                  {/* Name */}
+                  <p className={`text-xs font-medium truncate mb-1 ${
+                    isActive ? "text-white" : "text-gray-300"
+                  }`}>
+                    {ch.name}
+                  </p>
+                  {/* Streak */}
+                  {streak > 0 && (
+                    <p className="text-[11px] text-orange-400/80 font-medium mb-1.5">🔥{streak}</p>
                   )}
+                  {/* Stamp buttons */}
+                  <div className="flex justify-center gap-1">
+                    {["👍", "🔥", "🎉", "❤️"].map((emoji) => {
+                      const count = stampState[ch.id]?.[emoji] || 0;
+                      return (
+                        <button
+                          key={emoji}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStamp(ch.id, emoji);
+                          }}
+                          className="text-xs px-1 py-0.5 rounded-md bg-white/5 hover:bg-white/15 transition-colors min-w-[28px] text-center"
+                          title={`${emoji} を送る`}
+                        >
+                          <span className="leading-none">{emoji}</span>
+                          {count > 0 && (
+                            <span className="text-[10px] text-gray-400 ml-0.5">{count}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </button>
               );
             })}
@@ -1064,6 +1076,32 @@ export default function VlogCalendarClient({
                 ))}
               </div>
             )}
+          </div>
+          {/* Stamp rules explanation */}
+          <div className="max-w-lg mx-auto mt-4 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-700/40 rounded-xl p-4 text-xs text-gray-300 space-y-1.5 shadow-lg shadow-purple-900/10">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">🎯</span>
+              <span className="text-sm font-bold text-purple-300">応援スタンプで盛り上がろう！</span>
+            </div>
+            <p className="flex items-start gap-2">
+              <span className="text-purple-400 mt-0.5">①</span>
+              <span>各メンバーのカードにある <span className="text-base">👍🔥🎉❤️</span> をポチッと応援！</span>
+            </p>
+            <p className="flex items-start gap-2">
+              <span className="text-purple-400 mt-0.5">②</span>
+              <span>もう一度押せば取り消せる <strong className="text-purple-300">トグル式</strong>（気軽に押してね）</span>
+            </p>
+            <p className="flex items-start gap-2">
+              <span className="text-purple-400 mt-0.5">③</span>
+              <span>各スタンプは <strong className="text-purple-300">1日1回</strong> まで（毎日リセット）</span>
+            </p>
+            <p className="flex items-start gap-2">
+              <span className="text-purple-400 mt-0.5">④</span>
+              <span>カウントは <strong className="text-purple-300">月間累計</strong>！ランキングタブでチェック 👉</span>
+            </p>
+            <div className="mt-2 pt-2 border-t border-purple-800/40 text-center">
+              <span className="text-gray-500">ログイン不要！誰でもワンクリックで応援できます 🎉</span>
+            </div>
           </div>
           {activeChannelFilter && (
             <div className="flex justify-center mt-2">
@@ -1134,17 +1172,17 @@ export default function VlogCalendarClient({
             </button>
           </div>
           <p className="text-center text-gray-600 text-xs mt-3">
-            Last updated: {new Date(updatedAt).toLocaleString("ja-JP")}
+            Last updated: {updatedAt.split(".")[0].replace("T", " ")}
           </p>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {viewMode === "ranking" ? (
-          <RankingView days={activeDays} watched={watched} channels={activeChannels} votes={voteState} streaks={streaks} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
+          <RankingView days={activeDays} watched={watched} channels={activeChannels} votes={voteState} streaks={streaks} stamps={stampState} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
         ) : (
           <>
-        <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-3">
+        <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-2">
           {monthDates.map(({ date, videos }) => {
             let filtered = showUnwatchedOnly
               ? videos.filter((v) => !watched.has(v.videoId))
@@ -1153,7 +1191,7 @@ export default function VlogCalendarClient({
               filtered = filtered.filter((v) => v.channelId === activeChannelFilter);
             }
             return (
-              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} theme={theme} />
+              <DayCell key={date} date={date} videos={filtered} watched={watched} onWatch={handleWatch} channels={activeChannels} />
             );
           })}
         </div>
@@ -1171,7 +1209,7 @@ export default function VlogCalendarClient({
             })
             .filter((d) => d.videos.length > 0)
             .map(({ date, videos }) => (
-              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} theme={theme} />
+              <DayCell key={date} date={date} videos={videos} watched={watched} onWatch={handleWatch} channels={activeChannels} />
             ))}
         </div>
           </>

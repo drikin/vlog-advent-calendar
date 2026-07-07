@@ -3,6 +3,7 @@ export interface Channel {
   handle: string;   // @handle
   name: string;     // Display name
   color: string;    // Accent color for UI (hex)
+  avatar?: string;  // YouTube profile image URL (optional)
 }
 
 export const CHANNELS: Channel[] = [

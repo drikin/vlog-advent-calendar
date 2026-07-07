@@ -24,3 +24,93 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ═══════════════════════════════════════════
+   Month Theme Classes — CSS-only backgrounds
+   No React style attributes involved.
+   ═══════════════════════════════════════════ */
+
+.theme-june {
+  background-color: #0c0e1a;
+  background-image:
+    radial-gradient(ellipse at 30% 40%, rgba(167, 139, 250, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 60%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    linear-gradient(to bottom, #0c0e1a, #1a1e3a, #0c0e1a),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' width='200' height='200'%3E%3C!-- Rain drops --%3E%3Cline x1='30' y1='10' x2='28' y2='22' stroke='rgba(150,180,220,0.25)' stroke-width='0.8' stroke-linecap='round'/%3E%3Cline x1='80' y1='30' x2='78' y2='42' stroke='rgba(150,180,220,0.2)' stroke-width='0.7' stroke-linecap='round'/%3E%3Cline x1='150' y1='15' x2='148' y2='27' stroke='rgba(150,180,220,0.22)' stroke-width='0.7' stroke-linecap='round'/%3E%3Cline x1='170' y1='80' x2='168' y2='92' stroke='rgba(150,180,220,0.18)' stroke-width='0.6' stroke-linecap='round'/%3E%3Cline x1='40' y1='130' x2='38' y2='142' stroke='rgba(150,180,220,0.2)' stroke-width='0.7' stroke-linecap='round'/%3E%3Cline x1='120' y1='150' x2='118' y2='162' stroke='rgba(150,180,220,0.18)' stroke-width='0.6' stroke-linecap='round'/%3E%3Cline x1='180' y1='160' x2='178' y2='172' stroke='rgba(150,180,220,0.15)' stroke-width='0.6' stroke-linecap='round'/%3E%3C!-- Hydrangea clusters --%3E%3Cg transform='translate(45,55)'%3E%3Ccircle cx='0' cy='0' r='3' fill='rgba(160,130,200,0.2)'/%3E%3Ccircle cx='4' cy='3' r='2.5' fill='rgba(160,130,200,0.18)'/%3E%3Ccircle cx='-3' cy='4' r='2.5' fill='rgba(160,130,200,0.18)'/%3E%3Ccircle cx='2' cy='-3' r='2.5' fill='rgba(160,130,200,0.18)'/%3E%3Ccircle cx='-4' cy='-2' r='2.5' fill='rgba(160,130,200,0.18)'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='rgba(200,180,220,0.25)'/%3E%3C/g%3E%3Cg transform='translate(140,120)'%3E%3Ccircle cx='0' cy='0' r='3' fill='rgba(130,150,220,0.18)'/%3E%3Ccircle cx='4' cy='3' r='2.5' fill='rgba(130,150,220,0.16)'/%3E%3Ccircle cx='-3' cy='4' r='2.5' fill='rgba(130,150,220,0.16)'/%3E%3Ccircle cx='2' cy='-3' r='2.5' fill='rgba(130,150,220,0.16)'/%3E%3Ccircle cx='-4' cy='-2' r='2.5' fill='rgba(130,150,220,0.16)'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='rgba(180,200,240,0.22)'/%3E%3C/g%3E%3Cg transform='translate(100,170)'%3E%3Ccircle cx='0' cy='0' r='2.5' fill='rgba(180,150,210,0.15)'/%3E%3Ccircle cx='3' cy='2' r='2' fill='rgba(180,150,210,0.13)'/%3E%3Ccircle cx='-2' cy='3' r='2' fill='rgba(180,150,210,0.13)'/%3E%3Ccircle cx='1' cy='-2' r='2' fill='rgba(180,150,210,0.13)'/%3E%3Ccircle cx='-3' cy='-1' r='2' fill='rgba(180,150,210,0.13)'/%3E%3Ccircle cx='0' cy='0' r='1.2' fill='rgba(210,190,230,0.2)'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: auto, auto, auto, 200px 200px;
+}
+.theme-june .theme-header-border {
+  border-color: #6366f130;
+}
+.theme-june .theme-cell-border {
+  border-color: #6366f120;
+}
+
+.theme-july {
+  background-color: #000000;
+  background-image:
+    radial-gradient(ellipse at 50% 30%, rgba(60, 30, 80, 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(40, 20, 60, 0.3) 0%, transparent 50%);
+}
+.theme-july .theme-header-border {
+  border-color: #f43f5e25;
+}
+.theme-july .theme-cell-border {
+  border-color: #f43f5e15;
+}
+
+.theme-august {
+  background-color: #120a08;
+  background-image: linear-gradient(to bottom, #120a08, #1a0e10);
+}
+.theme-august .theme-header-border {
+  border-color: #f9731625;
+}
+.theme-august .theme-cell-border {
+  border-color: #f9731615;
+}
+
+.theme-september {
+  background-color: #0d0f08;
+  background-image: linear-gradient(to bottom, #0d0f08, #15120a);
+}
+.theme-september .theme-header-border {
+  border-color: #d4a01725;
+}
+.theme-september .theme-cell-border {
+  border-color: #d4a01715;
+}
+
+.theme-october {
+  background-color: #100a0d;
+  background-image: linear-gradient(to bottom, #100a0d, #150e14);
+}
+.theme-october .theme-header-border {
+  border-color: #ea580c25;
+}
+.theme-october .theme-cell-border {
+  border-color: #ea580c15;
+}
+
+.theme-november {
+  background-color: #0d0b08;
+  background-image: linear-gradient(to bottom, #0d0b08, #15120d);
+}
+.theme-november .theme-header-border {
+  border-color: #c2410c25;
+}
+.theme-november .theme-cell-border {
+  border-color: #c2410c15;
+}
+
+.theme-december {
+  background-color: #080c15;
+  background-image: linear-gradient(to bottom, #080c15, #0e1225);
+}
+.theme-december .theme-header-border {
+  border-color: #22c55e25;
+}
+.theme-december .theme-cell-border {
+  border-color: #22c55e15;
+}
