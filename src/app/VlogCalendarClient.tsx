@@ -775,30 +775,30 @@ export default function VlogCalendarClient({
     })();
   }, [userDid]);
 
-  const handleStamp = useCallback(async (videoId: string, stamp: string) => {
+  const handleStamp = useCallback(async (channelId: string, stamp: string) => {
     // Optimistic toggle
     setStampState((prev) => {
       const next = { ...prev };
-      const ch = { ...(next[videoId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+      const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
       // We don't know if it's add or remove yet, so optimistically +1
       ch[stamp] = (ch[stamp] || 0) + 1;
-      next[videoId] = ch;
+      next[channelId] = ch;
       return next;
     });
     try {
       const res = await fetch("/api/stamps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId, stamp }),
+        body: JSON.stringify({ channelId, stamp, month: activeMonth }),
       });
       const data = await res.json();
       if (!res.ok) {
         // Revert on failure
         setStampState((prev) => {
           const next = { ...prev };
-          const ch = { ...(next[videoId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+          const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
           ch[stamp] = Math.max(0, (ch[stamp] || 0) - 1);
-          next[videoId] = ch;
+          next[channelId] = ch;
           return next;
         });
         return;
@@ -806,20 +806,20 @@ export default function VlogCalendarClient({
       // Sync with server counts
       setStampState((prev) => {
         const next = { ...prev };
-        next[videoId] = data.counts;
+        next[channelId] = data.counts;
         return next;
       });
     } catch {
       // Revert
       setStampState((prev) => {
         const next = { ...prev };
-        const ch = { ...(next[videoId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+        const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
         ch[stamp] = Math.max(0, (ch[stamp] || 0) - 1);
-        next[videoId] = ch;
+        next[channelId] = ch;
         return next;
       });
     }
-  }, [activeMonth]);
+  }, []);
 
   const handleVote = useCallback(async (channelId: string) => {
     if (!userDid) {
@@ -1042,11 +1042,33 @@ export default function VlogCalendarClient({
                       className="text-[11px] text-orange-400/80 font-medium mb-1.5"
                     >🔥 連続{streak}日</p>
                   )}
-                </div>
-              )}
-            </button>
-          );
-        })}
+                  {/* Stamp buttons - hidden: now per-video in Today's Updates */}
+                  <div className="hidden flex justify-center gap-1">
+                    {["👍", "🔥", "🎉", "❤️"].map((emoji, si) => {
+                      const count = stampState[ch.id]?.[emoji] || 0;
+                      return (
+                        <button
+                          key={emoji}
+                          data-tour={si === 0 && emoji === "👍" ? "stamp-btn" : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStamp(ch.id, emoji);
+                          }}
+                          className="text-xs px-1 py-0.5 rounded-md bg-white/5 hover:bg-white/15 transition-colors min-w-[28px] text-center"
+                          title={`${emoji} を送る`}
+                        >
+                          <span className="leading-none">{emoji}</span>
+                          {count > 0 && (
+                            <span className="text-[10px] text-gray-400 ml-0.5">{count}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
           {activeChannels.some((ch) => streaks[ch.id] > 0) && (
             <p className="text-center text-gray-600 text-[10px] mt-2">
               🔥数字は2026年以降の連続更新日数（24時間ごとに自動更新）
