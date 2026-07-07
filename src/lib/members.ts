@@ -43,11 +43,11 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
 ];
 
 /** Get member list for a given month (format: "2026-06").
- *  Redis に保存されたリストを優先し、未設定ならデフォルト（6月リスト）を返す。
- *  7月以降の特別扱いは廃止 — 全月共通のロジック。 */
+ *  Redis に保存されたリストを優先し、未設定ならデフォルトを返す。
+ *  7月は JULY_DEFAULT_CHANNELS を使う（継続メンバー）。 */
 export async function getMembers(month: string): Promise<Channel[]> {
   const redis = getRedis();
-  const defaults = DEFAULT_CHANNELS;
+  const defaults = month === "2026-07" ? JULY_DEFAULT_CHANNELS : DEFAULT_CHANNELS;
   if (!redis) return defaults;
 
   try {
