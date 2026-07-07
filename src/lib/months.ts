@@ -59,3 +59,13 @@ export function defaultMonth(): string {
   if (isSupportedMonth(cur)) return cur;
   return MONTHS[0];
 }
+
+/** 今日の日付（JST, YYYY-MM-DD） */
+export function todayJstDate(): string {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const y = jst.getFullYear();
+  const m = String(jst.getMonth() + 1).padStart(2, "0");
+  const d = String(jst.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}

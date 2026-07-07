@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
-import { MONTHS, monthLabel, monthKey, daysInMonth } from "@/lib/months";
+import { MONTHS, monthLabel, monthKey, daysInMonth, todayJstDate, currentMonth } from "@/lib/months";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -895,6 +895,16 @@ export default function VlogCalendarClient({
   );
   const unwatchedCount = totalVideos - watchedCount;
 
+  // 今日の更新ハイライト（現在の月＝今月のときのみ）
+  const isCurrentMonth = activeMonth === currentMonth();
+  const todayStr = todayJstDate();
+  const todayVideos = isCurrentMonth
+    ? activeDays
+        .filter((d) => d.date === todayStr)
+        .flatMap((d) => d.videos)
+        .sort((a, b) => (a.channelName || "").localeCompare(b.channelName || ""))
+    : [];
+
   const themeClass = `theme-${monthKey(activeMonth)}`;
 
   return (
@@ -1004,7 +1014,7 @@ export default function VlogCalendarClient({
                   </p>
                   {/* Streak */}
                   {streak > 0 && (
-                    <p className="text-[11px] text-orange-400/80 font-medium mb-1.5">🔥{streak}</p>
+                    <p className="text-[11px] text-orange-400/80 font-medium mb-1.5">🔥 連続{streak}日</p>
                   )}
                   {/* Stamp buttons */}
                   <div className="flex justify-center gap-1">
@@ -1034,7 +1044,7 @@ export default function VlogCalendarClient({
           </div>
           {activeChannels.some((ch) => streaks[ch.id] > 0) && (
             <p className="text-center text-gray-600 text-[10px] mt-2">
-              🔥数字は2026年以降の連続更新日数（24時間ごとに更新）
+              🔥数字は2026年以降の連続更新日数（24時間ごとに自動更新）
             </p>
           )}
           {/* Channel subscription list */}
@@ -1174,6 +1184,50 @@ export default function VlogCalendarClient({
           <RankingView days={activeDays} watched={watched} channels={activeChannels} votes={voteState} streaks={streaks} stamps={stampState} userDid={userDid} onVote={handleVote} defaultTab={lastRankingTab} onTabChange={(tab: RankingTab) => setLastRankingTab(tab)} />
         ) : (
           <>
+          {/* 今日の更新ハイライト */}
+          {todayVideos.length > 0 && (
+            <section className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">✨</span>
+                <h2 className="text-base md:text-lg font-bold text-white">今日の更新</h2>
+                <span className="text-xs text-gray-500">{todayVideos.length} 本</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {todayVideos.map((v) => (
+                  <a
+                    key={v.videoId}
+                    href={`https://www.youtube.com/watch?v=${v.videoId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative rounded-xl overflow-hidden border border-orange-500/30 bg-black/40 hover:border-orange-400/60 transition-all"
+                  >
+                    <div className="aspect-video bg-gray-900 relative">
+                      {v.thumbnail ? (
+                        <img
+                          src={v.thumbnail}
+                          alt={v.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">No img</div>
+                      )}
+                      {watched.has(v.videoId) && (
+                        <div className="absolute top-1.5 right-1.5 bg-green-600/90 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                          視聴済
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-[11px] text-orange-300/90 font-medium truncate">{v.channelName}</p>
+                      <p className="text-xs text-gray-300 line-clamp-2 leading-tight mt-0.5">{v.title}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
         <div className="hidden md:grid md:grid-cols-5 lg:grid-cols-7 gap-2">
           {monthDates.map(({ date, videos }) => {
             let filtered = showUnwatchedOnly
