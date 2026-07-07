@@ -28,10 +28,11 @@ export function monthLabel(month: string): string {
   return `${y}.${m}`;
 }
 
-/** YYYY-MM → テーマ/URL用キー "july"（先頭0除去、小文字） */
+/** YYYY-MM → テーマ/URL用キー "july"（"07" → "july" のように先頭0除去し小文字月名） */
+const MONTH_NAMES = ["", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 export function monthKey(month: string): string {
-  const [, m] = month.split("-");
-  return String(parseInt(m, 10)); // "07" → "7"
+  const m = parseInt(month.split("-")[1], 10);
+  return MONTH_NAMES[m] || "july";
 }
 
 /** 月キー "7" → YYYY-MM "2026-07"（年は固定で2026企画） */
