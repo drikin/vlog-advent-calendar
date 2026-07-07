@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { DayVideos, YouTubeVideo } from "@/lib/youtube";
 import type { Channel } from "@/config/channels";
-import { MONTHS, monthLabel, monthKey, daysInMonth, todayJstDate, currentMonth } from "@/lib/months";
+import { MONTHS, monthLabel, monthKey, daysInMonth, todayJstDate } from "@/lib/months";
 
 const WATCHED_KEY = "vlog-watched-videos";
 
@@ -680,6 +680,7 @@ export default function VlogCalendarClient({
   streaks,
   stamps: initialStamps,
   initialMonth,
+  buildSha,
 }: {
   daysByMonth: Record<string, DayVideos[]>;
   channelsByMonth: Record<string, Channel[]>;
@@ -693,6 +694,7 @@ export default function VlogCalendarClient({
   streaks: Record<string, number>;
   stamps: Record<string, Record<string, number>>;
   initialMonth: string;
+  buildSha?: string;
 }) {
   const [watched, setWatched] = useState<WatchedMap>(new Map());
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
@@ -902,15 +904,12 @@ export default function VlogCalendarClient({
   );
   const unwatchedCount = totalVideos - watchedCount;
 
-  // 今日の更新ハイライト（現在の月＝今月のときのみ）
-  const isCurrentMonth = activeMonth === currentMonth();
+  // 今日の更新ハイライト（JST基準で当日の動画があれば表示。月判定はしない）
   const todayStr = todayJstDate();
-  const todayVideos = isCurrentMonth
-    ? activeDays
-        .filter((d) => d.date === todayStr)
-        .flatMap((d) => d.videos)
-        .sort((a, b) => (a.channelName || "").localeCompare(b.channelName || ""))
-    : [];
+  const todayVideos = activeDays
+    .filter((d) => d.date === todayStr)
+    .flatMap((d) => d.videos)
+    .sort((a, b) => (a.channelName || "").localeCompare(b.channelName || ""));
 
   const themeClass = `theme-${monthKey(activeMonth)}`;
 
@@ -1182,6 +1181,7 @@ export default function VlogCalendarClient({
           </div>
           <p className="text-center text-gray-600 text-xs mt-3">
             Last updated: {updatedAt.split(".")[0].replace("T", " ")}
+            {buildSha ? ` · build ${buildSha}` : ""}
           </p>
         </div>
       </header>

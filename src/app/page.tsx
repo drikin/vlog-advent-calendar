@@ -7,9 +7,23 @@ import { getAllVotes } from "@/lib/vote";
 import { getStreaks } from "@/lib/streak-cache";
 import { getAllStamps } from "@/lib/stamps";
 import { MONTHS, defaultMonth } from "@/lib/months";
+import { execSync } from "node:child_process";
 
 // Dynamic rendering so cookie-based auth works on every request
 export const dynamic = "force-dynamic";
+
+/** ビルド/コミット識別子 — フッターに表示してデプロイ判定に使う */
+function getBuildSha(): string {
+  // Vercel 本番ビルド時は自動注入される
+  const vercel = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (vercel) return vercel.slice(0, 7);
+  // ローカル/その他: git から取得
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "local";
+  }
+}
 
 /** Server Component: fetch YouTube data + auth state at request time */
 export default async function Home() {
@@ -85,6 +99,8 @@ export default async function Home() {
     // non-fatal
   }
 
+  const buildSha = getBuildSha();
+
   return (
     <VlogCalendarClient
       daysByMonth={daysByMonth}
@@ -99,6 +115,7 @@ export default async function Home() {
       streaks={streaks}
       stamps={stamps}
       initialMonth={activeMonth}
+      buildSha={buildSha}
     />
   );
 }
