@@ -83,16 +83,30 @@ export default function Tour() {
       width: rect.width,
       height: rect.height,
     });
-    // 座標確定後にスクロール（smoothではなく即時でズレ防止）
-    el.scrollIntoView({ block: "center" });
   }, [step]);
 
   useLayoutEffect(() => {
     if (!open) return;
-    // レイアウト確定後に計測、さらに rAF で再計測（scroll後の補正）
+    // 1. 現在の座標を計測
     measure();
-    const raf = requestAnimationFrame(() => measure());
-    return () => cancelAnimationFrame(raf);
+    // 2. ターゲットを画面中央にスクロール（即時）
+    const id = STEPS[step]?.target;
+    const el = id ? document.querySelector(`[data-tour="${id}"]`) : null;
+    if (el) el.scrollIntoView({ block: "center", behavior: "auto" });
+    // 3. スクロール後に複数回再計測（rAF×2 + scrollend）
+    const raf1 = requestAnimationFrame(() => {
+      measure();
+      const raf2 = requestAnimationFrame(() => measure());
+      const onScrollEnd = () => measure();
+      window.addEventListener("scrollend", onScrollEnd, { once: true });
+      // fallback: 300ms後にも計測
+      setTimeout(() => measure(), 300);
+      return () => {
+        cancelAnimationFrame(raf2);
+        window.removeEventListener("scrollend", onScrollEnd);
+      };
+    });
+    return () => cancelAnimationFrame(raf1);
   }, [open, step, measure]);
 
   // リサイズ時も再計測
