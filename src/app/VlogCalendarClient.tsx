@@ -132,7 +132,7 @@ function VideoCard({
         <img
           src={video.thumbnail}
           alt={video.title}
-          className={`w-full h-full object-cover ${watched ? "" : "group-hover:scale-105"} transition-transform duration-300`}
+          className={`w-full h-full object-cover ${watched ? "grayscale opacity-80" : "group-hover:scale-105"} transition-transform duration-300`}
           loading="lazy"
         />
         {watched && stampLabel && (
@@ -193,6 +193,7 @@ function DayCell({
   const isWeekend = dayOfWeek === "土" || dayOfWeek === "日";
   const isEmpty = videos.length === 0;
   const watchedCount = videos.filter((v) => watched.has(v.videoId)).length;
+  const unwatchedCount = videos.length - watchedCount;
   const allWatched = videos.length > 0 && watchedCount === videos.length;
 
   // Check if this cell is today (JST)
@@ -239,9 +240,15 @@ function DayCell({
         </span>
         <span className={`text-xs ${isWeekend ? "text-red-400/50" : "text-gray-500"}`}>({dayOfWeek})</span>
         {videos.length > 0 && (
-          <span className="text-xs text-gray-600 ml-0.5">
-            {watchedCount}/{videos.length}
-          </span>
+          unwatchedCount > 0 ? (
+            <span className="text-xs text-orange-400/90 ml-0.5 font-medium" title="未視聴の動画数">
+              未視聴 {unwatchedCount}
+            </span>
+          ) : (
+            <span className="text-xs text-green-400/80 ml-0.5 font-medium" title="すべて視聴済み">
+              ✓ 済
+            </span>
+          )
         )}
       </div>
       <div className="space-y-1.5">
