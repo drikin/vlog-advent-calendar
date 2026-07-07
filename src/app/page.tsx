@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { resolveProfile } from "@/lib/auth/did-resolver";
 import { getAllVotes } from "@/lib/vote";
 import { getStreaks } from "@/lib/streak-cache";
-import { getAllStamps } from "@/lib/stamps";
+import { getStampsForVideos } from "@/lib/stamps";
 import { MONTHS, defaultMonth } from "@/lib/months";
 import { execSync } from "node:child_process";
 
@@ -91,10 +91,12 @@ export default async function Home() {
     // non-fatal
   }
 
-  // Fetch stamp data (daily, for current month)
+  // Fetch stamp data (per video, for current month)
   let stamps: Record<string, Record<string, number>> = {};
   try {
-    stamps = await getAllStamps(activeChannels, activeMonth);
+    const monthVideos = (daysByMonth[activeMonth] || []).flatMap((d) => d.videos);
+    const videoIds = [...new Set(monthVideos.map((v) => v.videoId))];
+    stamps = await getStampsForVideos(videoIds);
   } catch {
     // non-fatal
   }

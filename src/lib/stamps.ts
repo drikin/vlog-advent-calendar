@@ -24,24 +24,23 @@ function todayJst(): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Get monthly stamp counts for all channels for a given month */
-export async function getAllStamps(
-  channels: { id: string }[],
-  month: string
+/** Get stamp counts for a list of video IDs */
+export async function getStampsForVideos(
+  videoIds: string[]
 ): Promise<Record<string, Record<StampType, number>>> {
   const redis = getRedis();
   if (!redis) return {};
 
   const pipeline = redis.pipeline();
-  for (const ch of channels) {
-    pipeline.hgetall(`${STAMP_KEY}:monthly:${month}:${ch.id}`);
+  for (const vid of videoIds) {
+    pipeline.hgetall(`${STAMP_KEY}:video:${vid}`);
   }
   const results = await pipeline.exec();
 
   const stamps: Record<string, Record<StampType, number>> = {};
-  for (let i = 0; i < channels.length; i++) {
+  for (let i = 0; i < videoIds.length; i++) {
     const data = results[i] as Record<string, string> | null;
-    stamps[channels[i].id] = {
+    stamps[videoIds[i]] = {
       "👍": parseInt(data?.["👍"] || "0"),
       "🔥": parseInt(data?.["🔥"] || "0"),
       "🎉": parseInt(data?.["🎉"] || "0"),
@@ -52,26 +51,25 @@ export async function getAllStamps(
 }
 
 /**
- * Toggle a stamp for a channel by IP.
- * Uses daily voter tracking (resets each day) but monthly cumulative counts.
+ * Toggle a stamp for a video by IP.
+ * Uses daily voter tracking (resets each day) with cumulative counts per video.
  */
 export async function toggleStamp(
-  channelId: string,
+  videoId: string,
   ip: string,
-  stamp: StampType,
-  month: string
+  stamp: StampType
 ): Promise<{ counts: Record<StampType, number>; action: "added" | "removed" } | null> {
   const redis = getRedis();
   if (!redis) return null;
 
   const today = todayJst();
 
-  // Daily voter tracking per month: stamps:voters:{date}:{month}:{channelId}:{stamp} → Set of IPs
-  const voterKey = `${STAMP_KEY}:voters:${today}:${month}:${channelId}:${stamp}`;
+  // Daily voter tracking per video: stamps:voters:{date}:{videoId}:{stamp} → Set of IPs
+  const voterKey = `${STAMP_KEY}:voters:${today}:${videoId}:${stamp}`;
   const alreadyStamped = await redis.sismember(voterKey, ip);
 
-  // Monthly cumulative count: stamps:monthly:{month}:{channelId} → hash of emoji→count
-  const countKey = `${STAMP_KEY}:monthly:${month}:${channelId}`;
+  // Cumulative count: stamps:video:{videoId} → hash of emoji→count
+  const countKey = `${STAMP_KEY}:video:${videoId}`;
 
   if (alreadyStamped) {
     // Remove stamp
