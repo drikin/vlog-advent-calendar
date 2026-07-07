@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 
 export interface TourStep {
   /** data-tour 属性の値（ターゲット要素を指定） */
   target: string;
   title: string;
-  body: string;
+  body: ReactNode;
   /** 吹き出しの位置（ターゲットに対する相対） */
   placement?: "top" | "bottom" | "left" | "right";
 }
@@ -35,7 +35,21 @@ const STEPS: TourStep[] = [
   {
     target: "bluesky-login",
     title: "Blueskyログイン 🦋",
-    body: "ログインすると視聴済みが端末間で同期されたり、もっと便利な機能が使えるようになります。まだ登録してない人は @drikin まで！",
+    body: (
+      <>
+        ログインすると視聴済みが端末間で同期されたり、もっと便利な機能が使えるようになります。
+        まだ登録してない人は
+        <a
+          href="https://bsky.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sky-400 hover:text-sky-300 underline"
+        >
+          bsky.app
+        </a>
+        からどうぞ！
+      </>
+    ),
     placement: "bottom",
   },
   {
