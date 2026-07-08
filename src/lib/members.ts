@@ -40,6 +40,7 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
   { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCImyTdQc9D3sO_fewFo5_qg", handle: "@dmp2205",          name: "だめぽ",                        color: "#FD79A8", avatar: "https://yt3.ggpht.com/ytc/AIdro_kWJbUJ5p8Wy1dLuTEUMzJLWPMOV_evRfXKGZtDeuO6JSt3BWQXRWDU0qpEoOChyboFO9W0=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCFuxphsWDDt210PEVWy883Q", handle: "@KentaYoutube",      name: "tamper's channel",             color: "#4ECDC4", avatar: "https://yt3.ggpht.com/FXTSZ2hOc7SnwDiyZ2ByvOpYBw_L2yqLswr6oESHUWtGxWRzbSUENuSfDI6vOn_2Shy54aJ_jw=s800-c-k-c0x00ffffff-no-rj" },
+  { id: "UCn03CTDReLR6KfMYoHokVGw", handle: "@jun_ya",            name: "jun_ya vlog channel",            color: "#95E1D3", avatar: "https://yt3.ggpht.com/ytc/AIdro_mT-1gKUgBcgTXuqplkiVBTZH94ckf-D51f-whf4SRiQfg=s800-c-k-c0x00ffffff-no-rj" },
 ];
 
 /** Get member list for a given month (format: "2026-06").
