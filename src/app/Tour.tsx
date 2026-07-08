@@ -188,8 +188,9 @@ export default function Tour() {
     }
   }
 
-  // ダイアログを閉じる（保存はしない）
+  // ダイアログを閉じる（チェックが入っていれば保存）
   function closeDialog() {
+    saveCurrentStep();
     setOpen(false);
   }
 
