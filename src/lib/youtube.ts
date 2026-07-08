@@ -212,11 +212,14 @@ export async function fetchAllVideosWithFallback(
   }
 }
 
-/** Group videos by date for a given month */
+/** Group videos by date for a given month.
+ *  Date is computed in JST (Asia/Tokyo) so videos published early
+ *  morning JST (which fall on the previous UTC day) land on the
+ *  correct calendar day. */
 export function groupByDate(videos: YouTubeVideo[], monthPrefix: string = "2026-06"): DayVideos[] {
   const map = new Map<string, YouTubeVideo[]>();
   for (const v of videos) {
-    const date = v.publishedAt.slice(0, 10);
+    const date = toJstDate(v.publishedAt);
     if (!date.startsWith(monthPrefix)) continue;
     if (!map.has(date)) map.set(date, []);
     map.get(date)!.push(v);
@@ -225,4 +228,19 @@ export function groupByDate(videos: YouTubeVideo[], monthPrefix: string = "2026-
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, videos]) => ({ date, videos }));
+}
+
+/** Convert a UTC ISO timestamp to JST date string (YYYY-MM-DD). */
+function toJstDate(publishedAt: string): string {
+  const fmt = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = fmt.formatToParts(new Date(publishedAt));
+  const y = parts.find((p) => p.type === "year")?.value ?? "2026";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${d}`;
 }
