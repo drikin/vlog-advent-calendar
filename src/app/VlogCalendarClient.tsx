@@ -775,30 +775,30 @@ export default function VlogCalendarClient({
     })();
   }, [userDid]);
 
-  const handleStamp = useCallback(async (channelId: string, stamp: string) => {
+  const handleStamp = useCallback(async (videoId: string, stamp: string) => {
     // Optimistic toggle
     setStampState((prev) => {
       const next = { ...prev };
-      const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+      const ch = { ...(next[videoId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
       // We don't know if it's add or remove yet, so optimistically +1
       ch[stamp] = (ch[stamp] || 0) + 1;
-      next[channelId] = ch;
+      next[videoId] = ch;
       return next;
     });
     try {
       const res = await fetch("/api/stamps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId, stamp, month: activeMonth }),
+        body: JSON.stringify({ videoId, stamp }),
       });
       const data = await res.json();
       if (!res.ok) {
         // Revert on failure
         setStampState((prev) => {
           const next = { ...prev };
-          const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+          const ch = { ...(next[videoId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
           ch[stamp] = Math.max(0, (ch[stamp] || 0) - 1);
-          next[channelId] = ch;
+          next[videoId] = ch;
           return next;
         });
         return;
@@ -806,16 +806,16 @@ export default function VlogCalendarClient({
       // Sync with server counts
       setStampState((prev) => {
         const next = { ...prev };
-        next[channelId] = data.counts;
+        next[videoId] = data.counts;
         return next;
       });
     } catch {
       // Revert
       setStampState((prev) => {
         const next = { ...prev };
-        const ch = { ...(next[channelId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
+        const ch = { ...(next[videoId] || { "👍": 0, "🔥": 0, "🎉": 0, "❤️": 0 }) };
         ch[stamp] = Math.max(0, (ch[stamp] || 0) - 1);
-        next[channelId] = ch;
+        next[videoId] = ch;
         return next;
       });
     }
