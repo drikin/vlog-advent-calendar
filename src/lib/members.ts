@@ -23,10 +23,11 @@ export const DEFAULT_CHANNELS: Channel[] = [
   { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCIlZWUBUeHX-NGBhf2_9ixw", handle: "@JunOtomo",          name: "湘南Vlogger - Jun Otomo",       color: "#45B7D1", avatar: "https://yt3.ggpht.com/UsLjw3Lv-dld3anXsVRomvfWXo7cHpBNQ2x5JdttRBfbTjlpxcIr6C5NoDgjPNJT8Cn0i672=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UChjoF-1FQ1OprvUV-PoqHGQ", handle: "@mickel_xr",        name: "MICKEL",                         color: "#E17055", avatar: "https://yt3.ggpht.com/AuRIbSRU61mgFWpOQIrCu46bV3UxW1K-vR72hv-anEk_HQWCL0J--A_hZzWbk8acJIPq3mwRuvY=s800-c-k-c0x00ffffff-no-rj" },
+  { id: "UC4QrsqVPruC_kniZ0ETd9Kw", handle: "@akichannel629",    name: "貧乏小説あきvlog",               color: "#00B894", avatar: "https://yt3.ggpht.com/f_mrl-5G3kU-madmk0l0H4Od9laks4aeWlrapEa3op9z9xshFSDNulwBZuNYVX9B30maUDJT7xhcTw=s800-c-fcrop64=1" },
 ];
 
 /**
- * July 2026 member list — continuation members after the offline meetup.
+ * July 2026 member list
  */
 export const JULY_DEFAULT_CHANNELS: Channel[] = [
   { id: "UCTfta7Ult6yLu7ru-WInOGg", handle: "@koh",              name: "散財小説ドリキン",             color: "#FF6B6B", avatar: "https://yt3.ggpht.com/ytc/AIdro_kBtjK34x9MKJYa9wLJP49D2NIoe9KjUQiwtoXyqPJMrsxW=s800-c-k-c0x00ffffff-no-rj" },
@@ -35,6 +36,7 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
   { id: "UCC1iKYB1Y_KOtHZXk7zY1jg", handle: "@kentakov",          name: "きままにいっkov",               color: "#6C5CE7", avatar: "https://yt3.ggpht.com/zwiWX4CPOowPQFpVUAih3lTzxBuuFb86kvt5xj-TJZMVti1q5P8lIVup70Z9mqjyblhjzmpqR4Q=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCtECO9x5EpcH_E2UUN7QqdQ", handle: "@Cohtaro",           name: "こうたろうカメラ日記",          color: "#A8E6CF", avatar: "https://yt3.ggpht.com/bsfYhQoK0IzjIIPUngMhCNJ_P5FDG_CVX0iGWFo3kwCmZli65NPBoBisukONWKNq32gjhSweaHo=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UChjoF-1FQ1OprvUV-PoqHGQ", handle: "@mickel_xr",        name: "MICKEL",                         color: "#E17055", avatar: "https://yt3.ggpht.com/AuRIbSRU61mgFWpOQIrCu46bV3UxW1K-vR72hv-anEk_HQWCL0J--A_hZzWbk8acJIPq3mwRuvY=s800-c-k-c0x00ffffff-no-rj" },
+  { id: "UC4QrsqVPruC_kniZ0ETd9Kw", handle: "@akichannel629",    name: "貧乏小説あきvlog",               color: "#00B894", avatar: "https://yt3.ggpht.com/f_mrl-5G3kU-madmk0l0H4Od9laks4aeWlrapEa3op9z9xshFSDNulwBZuNYVX9B30maUDJT7xhcTw=s800-c-fcrop64=1" },
   { id: "UCeHyXFWymAvAHZiW8sNFSPw", handle: "@watarunishida2nd791", name: "Wataru Nishida 西田航 2nd",    color: "#74B9FF", avatar: "https://yt3.ggpht.com/ytc/AIdro_lVZiZmTqiPxVEkRKsCLMAjHe1hBD8QEmS3dK9pQ3ZXWg=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCIlZWUBUeHX-NGBhf2_9ixw", handle: "@JunOtomo",          name: "湘南Vlogger - Jun Otomo",       color: "#45B7D1", avatar: "https://yt3.ggpht.com/UsLjw3Lv-dld3anXsVRomvfWXo7cHpBNQ2x5JdttRBfbTjlpxcIr6C5NoDgjPNJT8Cn0i672=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
