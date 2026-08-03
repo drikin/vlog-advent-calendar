@@ -20,7 +20,7 @@ export const DEFAULT_CHANNELS: Channel[] = [
   { id: "UCtECO9x5EpcH_E2UUN7QqdQ", handle: "@Cohtaro",           name: "こうたろうカメラ日記",          color: "#A8E6CF", avatar: "https://yt3.ggpht.com/bsfYhQoK0IzjIIPUngMhCNJ_P5FDG_CVX0iGWFo3kwCmZli65NPBoBisukONWKNq32gjhSweaHo=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCIcziIKVG1Y7meKEOXHNlGw", handle: "@eiko3kobe",         name: "EIKO⭐️",                        color: "#FF8A5C", avatar: "https://yt3.ggpht.com/jENe_xW3fFn7gYxVnxXhP8iBejmcscjMW9Ax-8exutOK9d5qXZAYqJEzU84pjMK_oAjgmVh0kA=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCn03CTDReLR6KfMYoHokVGw", handle: "@jun_ya",            name: "jun_ya vlog channel",            color: "#95E1D3", avatar: "https://yt3.ggpht.com/ytc/AIdro_mT-1gKUgBcgTXuqplkiVBTZH94ckf-D51f-whf4SRiQfg=s800-c-k-c0x00ffffff-no-rj" },
-  { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
+  { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "リューの日々、記録。",           color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCIlZWUBUeHX-NGBhf2_9ixw", handle: "@JunOtomo",          name: "湘南Vlogger - Jun Otomo",       color: "#45B7D1", avatar: "https://yt3.ggpht.com/UsLjw3Lv-dld3anXsVRomvfWXo7cHpBNQ2x5JdttRBfbTjlpxcIr6C5NoDgjPNJT8Cn0i672=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UChjoF-1FQ1OprvUV-PoqHGQ", handle: "@mickel_xr",        name: "MICKEL",                         color: "#E17055", avatar: "https://yt3.ggpht.com/AuRIbSRU61mgFWpOQIrCu46bV3UxW1K-vR72hv-anEk_HQWCL0J--A_hZzWbk8acJIPq3mwRuvY=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UC4QrsqVPruC_kniZ0ETd9Kw", handle: "@akichannel629",    name: "貧乏小説あきvlog",               color: "#00B894", avatar: "https://yt3.ggpht.com/f_mrl-5G3kU-madmk0l0H4Od9laks4aeWlrapEa3op9z9xshFSDNulwBZuNYVX9B30maUDJT7xhcTw=s800-c-fcrop64=1" },
@@ -39,18 +39,28 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
   { id: "UC4QrsqVPruC_kniZ0ETd9Kw", handle: "@akichannel629",    name: "貧乏小説あきvlog",               color: "#00B894", avatar: "https://yt3.ggpht.com/f_mrl-5G3kU-madmk0l0H4Od9laks4aeWlrapEa3op9z9xshFSDNulwBZuNYVX9B30maUDJT7xhcTw=s800-c-fcrop64=1" },
   { id: "UCeHyXFWymAvAHZiW8sNFSPw", handle: "@watarunishida2nd791", name: "Wataru Nishida 西田航 2nd",    color: "#74B9FF", avatar: "https://yt3.ggpht.com/ytc/AIdro_lVZiZmTqiPxVEkRKsCLMAjHe1hBD8QEmS3dK9pQ3ZXWg=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCIlZWUBUeHX-NGBhf2_9ixw", handle: "@JunOtomo",          name: "湘南Vlogger - Jun Otomo",       color: "#45B7D1", avatar: "https://yt3.ggpht.com/UsLjw3Lv-dld3anXsVRomvfWXo7cHpBNQ2x5JdttRBfbTjlpxcIr6C5NoDgjPNJT8Cn0i672=s800-c-k-c0x00ffffff-no-rj" },
-  { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "物欲帳チャンネル",              color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
+  { id: "UCWyzddWvD-GsV1wsLqSP_9A", handle: "@butsuyoku_life",    name: "リューの日々、記録。",           color: "#F7B731", avatar: "https://yt3.ggpht.com/R87rmjvOt1R6wIaxO7xuxlmPWKqK2Ep4eeugsI9EM1MNIlRbECJl7K57PjAxN7Xqzw8TURXGOQ=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCImyTdQc9D3sO_fewFo5_qg", handle: "@dmp2205",          name: "だめぽ",                        color: "#FD79A8", avatar: "https://yt3.ggpht.com/ytc/AIdro_kWJbUJ5p8Wy1dLuTEUMzJLWPMOV_evRfXKGZtDeuO6JSt3BWQXRWDU0qpEoOChyboFO9W0=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCFuxphsWDDt210PEVWy883Q", handle: "@KentaYoutube",      name: "tamper's channel",             color: "#4ECDC4", avatar: "https://yt3.ggpht.com/FXTSZ2hOc7SnwDiyZ2ByvOpYBw_L2yqLswr6oESHUWtGxWRzbSUENuSfDI6vOn_2Shy54aJ_jw=s800-c-k-c0x00ffffff-no-rj" },
   { id: "UCn03CTDReLR6KfMYoHokVGw", handle: "@jun_ya",            name: "jun_ya vlog channel",            color: "#95E1D3", avatar: "https://yt3.ggpht.com/ytc/AIdro_mT-1gKUgBcgTXuqplkiVBTZH94ckf-D51f-whf4SRiQfg=s800-c-k-c0x00ffffff-no-rj" },
 ];
 
+/**
+ * 月ごとのデフォルトメンバーリスト。
+ * 明示指定がない月は DEFAULT_CHANNELS にフォールバック。
+ * 7月は JULY_DEFAULT_CHANNELS（継続メンバー）、8月は7月から引き継ぎ。
+ */
+const DEFAULTS_BY_MONTH: Record<string, Channel[]> = {
+  "2026-07": JULY_DEFAULT_CHANNELS,
+  "2026-08": JULY_DEFAULT_CHANNELS, // 8月は7月から引き継ぎ
+};
+
 /** Get member list for a given month (format: "2026-06").
  *  Redis に保存されたリストを優先し、未設定ならデフォルトを返す。
- *  7月は JULY_DEFAULT_CHANNELS を使う（継続メンバー）。 */
+ *  7月は JULY_DEFAULT_CHANNELS、8月は7月から引き継ぎ（継続メンバー）。 */
 export async function getMembers(month: string): Promise<Channel[]> {
   const redis = getRedis();
-  const defaults = month === "2026-07" ? JULY_DEFAULT_CHANNELS : DEFAULT_CHANNELS;
+  const defaults = DEFAULTS_BY_MONTH[month] ?? DEFAULT_CHANNELS;
   if (!redis) return defaults;
 
   try {
