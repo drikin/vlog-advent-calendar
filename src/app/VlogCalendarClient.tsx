@@ -26,6 +26,32 @@ function saveWatchedLocal(watched: WatchedMap) {
   } catch {}
 }
 
+/* ─── Session prefs（UI 選択をセッション内で保持。リロードしてもリセットされない） ─── */
+
+const PREFS_KEY = "vlog-calendar-prefs";
+
+type VlogPrefs = {
+  showUnwatchedOnly?: boolean;
+  viewMode?: "calendar" | "ranking";
+  activeChannelFilter?: string | null;
+  activeMonth?: string;
+  lastRankingTab?: RankingTab;
+};
+
+function loadPrefs(): VlogPrefs {
+  try {
+    const raw = sessionStorage.getItem(PREFS_KEY);
+    if (raw) return JSON.parse(raw) as VlogPrefs;
+  } catch {}
+  return {};
+}
+
+function savePrefs(p: VlogPrefs) {
+  try {
+    sessionStorage.setItem(PREFS_KEY, JSON.stringify(p));
+  } catch {}
+}
+
 async function loadWatchedApi(): Promise<WatchedMap | null> {
   try {
     const res = await fetch("/api/watched");
@@ -711,6 +737,10 @@ export default function VlogCalendarClient({
   const [stampState, setStampState] = useState<Record<string, Record<string, number>>>(initialStamps);
   const [activeMonth, setActiveMonth] = useState<string>(initialMonth);
   const [visitCount, setVisitCount] = useState<number | null>(null);
+  // セッションから選択を復元したか（初回マウント後に true → 以後 state 変更を保存）
+  const [hydrated, setHydrated] = useState(false);
+  // Remember last active ranking tab across view mode switches
+  const [lastRankingTab, setLastRankingTab] = useState<RankingTab>(initialRankingTab);
 
   // トップページ累計アクセス数を取得（ヘッダー表示用）
   useEffect(() => {
@@ -722,6 +752,32 @@ export default function VlogCalendarClient({
       .catch(() => {});
   }, []);
 
+  // マウント時にセッションの選択を復元（リロードしても「未視聴のみ表示」等が保持される）
+  // sessionStorage は SSR 時（サーバー・初回ハイドレーション）に読めないため、
+  // デフォルトで描画した後に副作用で復元するのが hydration 不一致を防ぐ唯一の方法。
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const p = loadPrefs();
+    const urlTab = searchParams.get("tab");
+    // URL の ?tab= によるディープリンクが優先されるよう、view/ranking は tab パラメータがある時は上書きしない
+    if (p.showUnwatchedOnly !== undefined) setShowUnwatchedOnly(p.showUnwatchedOnly);
+    if (!urlTab) {
+      if (p.viewMode) setViewMode(p.viewMode);
+      if (p.lastRankingTab) setLastRankingTab(p.lastRankingTab);
+    }
+    if (p.activeChannelFilter !== undefined) setActiveChannelFilter(p.activeChannelFilter);
+    if (p.activeMonth) setActiveMonth(p.activeMonth);
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // 選択の変更をセッションへ保存（復元完了後）
+  useEffect(() => {
+    if (!hydrated) return;
+    savePrefs({ showUnwatchedOnly, viewMode, activeChannelFilter, activeMonth, lastRankingTab });
+  }, [hydrated, showUnwatchedOnly, viewMode, activeChannelFilter, activeMonth, lastRankingTab]);
+
   // Streaks are pre-computed server-side and cached in Redis
   const allChannels = Object.values(channelsByMonth)
     .flat()
@@ -731,8 +787,6 @@ export default function VlogCalendarClient({
   const activeDays = daysByMonth[activeMonth] || [];
   const activeChannels = (channelsByMonth[activeMonth] || [])
     .sort((a, b) => (streaks[b.id] || 0) - (streaks[a.id] || 0));
-  // Remember last active ranking tab across view mode switches
-  const [lastRankingTab, setLastRankingTab] = useState<RankingTab>(initialRankingTab);
 
   // Session keepalive: ping every 5 minutes while logged in
   useEffect(() => {
