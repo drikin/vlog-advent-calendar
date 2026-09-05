@@ -53,6 +53,7 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
 const DEFAULTS_BY_MONTH: Record<string, Channel[]> = {
   "2026-07": JULY_DEFAULT_CHANNELS,
   "2026-08": JULY_DEFAULT_CHANNELS, // 8月は7月から引き継ぎ
+  "2026-09": JULY_DEFAULT_CHANNELS, // 9月は8月から引き継ぎ
 };
 
 /** Get member list for a given month (format: "2026-06").

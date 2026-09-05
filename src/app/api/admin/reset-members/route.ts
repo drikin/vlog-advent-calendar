@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 const DEFAULTS_BY_MONTH: Record<string, typeof JULY_DEFAULT_CHANNELS> = {
   "2026-07": JULY_DEFAULT_CHANNELS,
   "2026-08": JULY_DEFAULT_CHANNELS, // 8月は7月から引き継ぎ
+  "2026-09": JULY_DEFAULT_CHANNELS, // 9月は8月から引き継ぎ
 };
 
 export async function GET(request: NextRequest) {
