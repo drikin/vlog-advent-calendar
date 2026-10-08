@@ -46,38 +46,48 @@ export const JULY_DEFAULT_CHANNELS: Channel[] = [
 ];
 
 /**
- * 月ごとのデフォルトメンバーリスト。
- * 明示指定がない月は DEFAULT_CHANNELS にフォールバック。
- * 7月は JULY_DEFAULT_CHANNELS（継続メンバー）、8月は7月から引き継ぎ。
+ * 名簿が変更された月だけを指定する。以降の月は直近の名簿を引き継ぐ。
  */
 const DEFAULTS_BY_MONTH: Record<string, Channel[]> = {
   "2026-07": JULY_DEFAULT_CHANNELS,
-  "2026-08": JULY_DEFAULT_CHANNELS, // 8月は7月から引き継ぎ
-  "2026-09": JULY_DEFAULT_CHANNELS, // 9月は8月から引き継ぎ
 };
 
-/** Get member list for a given month (format: "2026-06").
- *  Redis に保存されたリストを優先し、未設定ならデフォルトを返す。
- *  7月は JULY_DEFAULT_CHANNELS、8月は7月から引き継ぎ（継続メンバー）。 */
+/** 対象月から企画開始月まで、新しい順に検索する。 */
+function memberMonths(month: string): string[] {
+  const index = MONTHS.indexOf(month);
+  return index < 0 ? [month] : MONTHS.slice(0, index + 1).reverse();
+}
+
+/** Redis 未設定時と管理者リセットで共通のデフォルト名簿。 */
+export function getDefaultMembers(month: string): Channel[] {
+  for (const candidate of memberMonths(month)) {
+    if (DEFAULTS_BY_MONTH[candidate]) return DEFAULTS_BY_MONTH[candidate];
+  }
+  return DEFAULT_CHANNELS;
+}
+
+async function resolveMembers(redis: Redis, month: string): Promise<Channel[]> {
+  for (const candidate of memberMonths(month)) {
+    const raw = await redis.get(`${KEY_PREFIX}${candidate}`);
+    // An explicitly saved empty roster is also authoritative.
+    if (Array.isArray(raw)) return raw as Channel[];
+    if (DEFAULTS_BY_MONTH[candidate]) return DEFAULTS_BY_MONTH[candidate];
+  }
+  return DEFAULT_CHANNELS;
+}
+
+/** 保存済み名簿を優先し、未設定の月は直前の名簿を引き継ぐ。
+ *  ページ表示時に未来月も取得するため、読み取りでは名簿を保存しない。 */
 export async function getMembers(month: string): Promise<Channel[]> {
   const redis = getRedis();
-  const defaults = DEFAULTS_BY_MONTH[month] ?? DEFAULT_CHANNELS;
+  const defaults = getDefaultMembers(month);
   if (!redis) return defaults;
 
   try {
-    const raw = await redis.get(`${KEY_PREFIX}${month}`);
-    if (raw && Array.isArray(raw) && raw.length > 0) return raw as Channel[];
+    return await resolveMembers(redis, month);
   } catch {
-    // fall through
+    return defaults;
   }
-
-  // Auto-seed: if key doesn't exist, save defaults and return them
-  try {
-    await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(defaults));
-  } catch {
-    // non-fatal
-  }
-  return defaults;
 }
 
 /** Save member list for a given month */
@@ -91,27 +101,15 @@ export async function setMembers(month: string, channels: Channel[]): Promise<vo
 /** Initialize members for a month by copying from another month or defaults */
 export async function initMembers(month: string, sourceMonth?: string): Promise<Channel[]> {
   const redis = getRedis();
-  if (!redis) return DEFAULT_CHANNELS;
+  if (!redis) return getDefaultMembers(sourceMonth ?? month);
   const existing = await redis.get(`${KEY_PREFIX}${month}`);
-  if (existing && Array.isArray(existing) && existing.length > 0) {
+  if (Array.isArray(existing)) {
     return existing as Channel[];
   }
 
-  // Copy from source month or use defaults (first supported month)
-  let source: Channel[] = DEFAULT_CHANNELS;
-  if (sourceMonth) {
-    const src = await redis.get(`${KEY_PREFIX}${sourceMonth}`);
-    if (src && Array.isArray(src) && src.length > 0) {
-      source = src as Channel[];
-    }
-  } else {
-    // Default to the first month's list
-    const src = await redis.get(`${KEY_PREFIX}${MONTHS[0]}`);
-    if (src && Array.isArray(src) && src.length > 0) {
-      source = src as Channel[];
-    }
-  }
-
-  await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(source));
-  return source;
+  // Read failures must not persist a fallback over a real roster.
+  const source = await resolveMembers(redis, sourceMonth ?? month);
+  const saved = await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(source), { nx: true });
+  // Preserve a roster saved concurrently by the owner.
+  return saved ? source : resolveMembers(redis, month);
 }
