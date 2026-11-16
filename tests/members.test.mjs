@@ -36,7 +36,7 @@ function setup({ enabled = true, failReads = false, beforeSet } = {}) {
     cache.set(name, exports);
     return exports;
   }
-  return { ...load("members"), data, writes };
+  return { ...load("members"), ...load("legacy-member-seed"), data, writes };
 }
 
 test("all remaining months retain July's members without Redis", async () => {
@@ -45,6 +45,74 @@ test("all remaining months retain July's members without Redis", async () => {
     assert.deepEqual(await m.getMembers(`2026-${month}`), m.JULY_DEFAULT_CHANNELS);
   }
   assert.deepEqual(await m.getMembers("2026-06"), m.DEFAULT_CHANNELS);
+});
+
+test("already-seeded November and December inherit the repaired October roster", async () => {
+  const m = setup();
+  m.data.set("members:2026-10", m.JULY_DEFAULT_CHANNELS);
+  m.data.set("members:2026-11", m.LEGACY_MEMBER_SEED);
+  m.data.set("members:2026-12", m.LEGACY_MEMBER_SEED);
+  for (const month of ["2026-11", "2026-12"]) {
+    assert.deepEqual(await m.getMembers(month), m.JULY_DEFAULT_CHANNELS);
+    assert.deepEqual(await m.initMembers(month), m.JULY_DEFAULT_CHANNELS);
+    assert.deepEqual(m.data.get(`members:${month}`), m.LEGACY_MEMBER_SEED);
+  }
+});
+
+test("all affected legacy seeds fall back to September without writing", async () => {
+  const m = setup();
+  const source = m.JULY_DEFAULT_CHANNELS.slice(1);
+  m.data.set("members:2026-09", source);
+  for (const month of ["2026-10", "2026-11", "2026-12"]) {
+    m.data.set(`members:${month}`, m.LEGACY_MEMBER_SEED);
+  }
+  assert.deepEqual(await m.getMembers("2026-12"), source);
+  assert.deepEqual(m.writes, []);
+});
+
+test("legacy seeds without a saved predecessor use July defaults", async () => {
+  const m = setup();
+  m.data.set("members:2026-11", m.LEGACY_MEMBER_SEED);
+  assert.deepEqual(await m.getMembers("2026-11"), m.JULY_DEFAULT_CHANNELS);
+});
+
+test("the same legacy roster remains authoritative outside the affected months", async () => {
+  const m = setup();
+  for (const month of ["2026-06", "2026-07", "2026-08", "2026-09", "2027-01"]) {
+    m.data.set(`members:${month}`, m.LEGACY_MEMBER_SEED);
+    assert.deepEqual(await m.getMembers(month), m.LEGACY_MEMBER_SEED);
+  }
+});
+
+test("custom legacy arrays are never mistaken for the known seed", async () => {
+  const m = setup();
+  const seed = m.LEGACY_MEMBER_SEED;
+  const variants = [
+    seed.slice(1), [...seed].reverse(), [...seed, m.JULY_DEFAULT_CHANNELS[10]],
+    ...["name", "handle", "avatar", "color", "id"].map((field) =>
+      seed.map((c, i) => i === 0 ? { ...c, [field]: "edited" } : c)),
+    seed.map((c, i) => i === 0 ? { ...c, note: "keep" } : c),
+  ];
+  for (const roster of variants) {
+    m.data.set("members:2026-11", roster);
+    assert.deepEqual(await m.getMembers("2026-11"), roster);
+  }
+});
+
+test("object key ordering does not prevent recognition of a legacy seed", async () => {
+  const m = setup();
+  const reorderedKeys = m.LEGACY_MEMBER_SEED.map((c) =>
+    Object.fromEntries(Object.entries(c).reverse()));
+  m.data.set("members:2026-11", reorderedKeys);
+  assert.deepEqual(await m.getMembers("2026-11"), m.JULY_DEFAULT_CHANNELS);
+});
+
+test("an owner can explicitly save even the exact old roster", async () => {
+  const m = setup();
+  await m.setMembers("2026-11", m.LEGACY_MEMBER_SEED);
+  assert.deepEqual(await m.getMembers("2026-11"), m.LEGACY_MEMBER_SEED);
+  assert.deepEqual(await m.initMembers("2026-11"), m.LEGACY_MEMBER_SEED);
+  assert.deepEqual(await m.getMembers("2026-12"), m.LEGACY_MEMBER_SEED);
 });
 
 test("missing October inherits September's saved roster, including additions and removals", async () => {
@@ -99,7 +167,7 @@ test("initialization uses the inherited roster, not the first month's roster", a
   const roster = m.JULY_DEFAULT_CHANNELS.slice(1);
   m.data.set("members:2026-09", roster);
   assert.deepEqual(await m.initMembers("2026-10"), roster);
-  assert.deepEqual(m.data.get("members:2026-10"), roster);
+  assert.deepEqual(m.data.get("members:2026-10"), { kind: "explicit-members-v1", channels: roster });
 });
 
 test("initialization can resolve an explicit source through missing months", async () => {
