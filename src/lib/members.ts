@@ -1,6 +1,7 @@
 import { Redis } from "@upstash/redis";
 import type { Channel } from "@/config/channels";
 import { MONTHS } from "./months";
+import { LEGACY_MEMBER_SEED } from "./legacy-member-seed";
 
 const KEY_PREFIX = "members:";
 
@@ -66,11 +67,41 @@ export function getDefaultMembers(month: string): Channel[] {
   return DEFAULT_CHANNELS;
 }
 
+/** Only the exact historical auto-seed in the affected months is ignored.
+ * Reads leave the original Redis value intact for rollback/auditing. */
+function isLegacySeed(month: string, channels: unknown[]): boolean {
+  if (!["2026-10", "2026-11", "2026-12"].includes(month)) return false;
+  return channels.length === LEGACY_MEMBER_SEED.length && channels.every((channel, index) => {
+    if (!channel || typeof channel !== "object") return false;
+    const expected = LEGACY_MEMBER_SEED[index];
+    const fields = Object.keys(expected) as (keyof Channel)[];
+    return Object.keys(channel).length === fields.length &&
+      fields.every((field) => Object.hasOwn(channel, field) &&
+        (channel as Channel)[field] === expected[field]);
+  });
+}
+
+function storedMembers(month: string, raw: unknown): Channel[] | null {
+  // Explicit writes are tagged atomically with their data, so an owner can
+  // intentionally save even the same ten members as the historical seed.
+  if (raw && typeof raw === "object" && "kind" in raw &&
+      raw.kind === "explicit-members-v1" && "channels" in raw && Array.isArray(raw.channels)) {
+    return raw.channels as Channel[];
+  }
+  if (Array.isArray(raw) && !isLegacySeed(month, raw)) return raw as Channel[];
+  return null;
+}
+
+function serializeMembers(channels: Channel[]): string {
+  return JSON.stringify({ kind: "explicit-members-v1", channels });
+}
+
 async function resolveMembers(redis: Redis, month: string): Promise<Channel[]> {
   for (const candidate of memberMonths(month)) {
     const raw = await redis.get(`${KEY_PREFIX}${candidate}`);
+    const channels = storedMembers(candidate, raw);
     // An explicitly saved empty roster is also authoritative.
-    if (Array.isArray(raw)) return raw as Channel[];
+    if (channels !== null) return channels;
     if (DEFAULTS_BY_MONTH[candidate]) return DEFAULTS_BY_MONTH[candidate];
   }
   return DEFAULT_CHANNELS;
@@ -95,21 +126,21 @@ export async function setMembers(month: string, channels: Channel[]): Promise<vo
   const redis = getRedis();
   if (!redis) return;
 
-  await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(channels));
+  await redis.set(`${KEY_PREFIX}${month}`, serializeMembers(channels));
 }
 
 /** Initialize members for a month by copying from another month or defaults */
 export async function initMembers(month: string, sourceMonth?: string): Promise<Channel[]> {
   const redis = getRedis();
   if (!redis) return getDefaultMembers(sourceMonth ?? month);
-  const existing = await redis.get(`${KEY_PREFIX}${month}`);
-  if (Array.isArray(existing)) {
-    return existing as Channel[];
+  const existing = storedMembers(month, await redis.get(`${KEY_PREFIX}${month}`));
+  if (existing !== null) {
+    return existing;
   }
 
   // Read failures must not persist a fallback over a real roster.
   const source = await resolveMembers(redis, sourceMonth ?? month);
-  const saved = await redis.set(`${KEY_PREFIX}${month}`, JSON.stringify(source), { nx: true });
+  const saved = await redis.set(`${KEY_PREFIX}${month}`, serializeMembers(source), { nx: true });
   // Preserve a roster saved concurrently by the owner.
   return saved ? source : resolveMembers(redis, month);
 }
